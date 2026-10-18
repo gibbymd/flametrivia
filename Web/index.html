@@ -1,0 +1,737 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#e8890c">
+<meta name="description" content="Type any subject, pick a difficulty, and play multiple-choice trivia written by Claude.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M32 4C22 20 18 28 18 38a14 14 0 0 0 28 0C46 28 42 20 32 4Z' fill='%23e8890c'/%3E%3C/svg%3E">
+<title>Flame Test Trivia</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: lab-notebook graph paper; setup bench -> question tile -> round summary, cumulative ledger on top */
+:root{
+  --paper:#f3f6f8; --grid:#dbe4ea; --ink:#14283a; --muted:#566b7c; --card:#ffffff; --line:#c9d6df;
+  --accent:#e8890c;
+  --good:#1f8a5b; --good-bg:#e3f4ec; --bad:#c23b3b; --bad-bg:#fbe7e7;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0e1b27; --grid:#172a3a; --ink:#e4edf3; --muted:#93a8b8; --card:#132433; --line:#24394b;
+  --accent:#f5a03a; --good:#4cc68d; --good-bg:#123a2a; --bad:#ee6b6b; --bad-bg:#3d1b1f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0e1b27; --grid:#172a3a; --ink:#e4edf3; --muted:#93a8b8; --card:#132433; --line:#24394b;
+  --accent:#f5a03a; --good:#4cc68d; --good-bg:#123a2a; --bad:#ee6b6b; --bad-bg:#3d1b1f; color-scheme:dark}
+
+*{box-sizing:border-box}
+html{color-scheme:light}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font-size:16px}
+[hidden]{display:none!important}
+img{max-width:100%}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px}
+.wrap{max-width:720px;margin:0 auto;padding-block:28px 48px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;gap:22px}
+
+h1{font-family:var(--display);font-weight:800;font-size:clamp(28px,6vw,40px);line-height:1;margin:0;letter-spacing:-.02em}
+h1 span{color:var(--accent)}
+.sub{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-top:6px}
+.label{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.stat{background:var(--card);padding:10px 12px}
+.stat b{display:block;font-family:var(--mono);font-weight:500;font-size:22px;font-variant-numeric:tabular-nums}
+.stat b.acc{color:var(--accent)}
+
+.panel{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:22px}
+.panel h2{font-family:var(--display);font-weight:500;font-size:22px;margin:0 0 14px}
+
+/* setup */
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.field input[type=text]{font:inherit;font-size:17px;padding:12px 14px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink);width:100%}
+.field input[type=text]:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+.levels{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.levels input{position:absolute;opacity:0;pointer-events:none}
+.levels label{display:flex;flex-direction:column;gap:2px;border:1px solid var(--line);border-radius:6px;padding:10px;cursor:pointer;background:var(--paper)}
+.levels label b{font-weight:600}
+.levels label small{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.levels input:checked+label{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.levels input:focus-visible+label{outline:2px solid var(--accent);outline-offset:2px}
+.seg{display:flex;gap:8px}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label{border:1px solid var(--line);border-radius:6px;padding:8px 16px;cursor:pointer;background:var(--paper);font-family:var(--mono)}
+.seg input:checked+label{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.seg input:focus-visible+label{outline:2px solid var(--accent);outline-offset:2px}
+.ideas{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.ideas button{font:12.5px var(--body);border:1px dashed var(--line);background:transparent;color:var(--muted);border-radius:99px;padding:4px 10px;cursor:pointer}
+.ideas button:hover{color:var(--ink);border-color:var(--accent)}
+.err{color:var(--bad);font-size:14px;margin:10px 0 0}
+
+/* question */
+.progress{display:flex;gap:3px;height:8px;margin-bottom:18px}
+.progress span{flex:1;border-radius:2px;background:var(--line)}
+.progress span.pend{background:transparent;border:1px dashed var(--line)}
+.progress span.good{background:var(--good)} .progress span.bad{background:var(--bad)} .progress span.cur{background:var(--accent)}
+.q{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:start}
+.tile{width:92px;aspect-ratio:1;max-width:100%;border:2px solid var(--ink);border-radius:4px;padding:6px 8px;display:flex;flex-direction:column;justify-content:space-between;font-family:var(--mono)}
+.tile .n{font-size:12px;display:flex;justify-content:space-between}
+.tile .sym{font-family:var(--display);font-weight:800;font-size:34px;line-height:1;color:var(--accent);overflow:hidden}
+.tile .nm{font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qbody{min-width:0}
+.meta{margin-bottom:6px}
+.qtext{font-family:var(--display);font-weight:500;font-size:clamp(20px,4.4vw,25px);line-height:1.25;margin:0 0 18px;text-wrap:balance}
+.choices{display:grid;gap:10px}
+.choice{display:flex;gap:12px;align-items:center;text-align:left;width:100%;font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px 14px;cursor:pointer;transition:border-color .15s}
+.choice:hover:not(:disabled){border-color:var(--accent)}
+.choice:focus-visible,.btn:focus-visible,.ideas button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.choice .k{font-family:var(--mono);font-weight:500;width:26px;height:26px;flex:none;display:grid;place-items:center;border:1px solid var(--line);border-radius:50%;font-size:13px}
+.choice:disabled{cursor:default}
+.choice.right{background:var(--good-bg);border-color:var(--good)}
+.choice.right .k{background:var(--good);border-color:var(--good);color:var(--card)}
+.choice.wrong{background:var(--bad-bg);border-color:var(--bad)}
+.choice.wrong .k{background:var(--bad);border-color:var(--bad);color:var(--card)}
+.choice.dim{opacity:.55}
+.reveal{margin-top:16px;border-left:3px solid var(--accent);padding:4px 0 4px 14px}
+.verdict{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:500}
+.verdict.good{color:var(--good)} .verdict.bad{color:var(--bad)}
+.reveal p{margin:6px 0 0;max-width:62ch}
+
+.btn{font:500 14px var(--body);border-radius:6px;padding:10px 18px;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#1b1206}
+.btn.primary:disabled{opacity:.5;cursor:default}
+.btn.quiet{border-color:transparent;color:var(--muted);padding-inline:8px}
+.btn.danger{border-color:var(--bad);color:var(--bad)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-top:18px}
+
+/* loading */
+.loading{display:flex;flex-direction:column;align-items:center;gap:14px;padding:30px 0;text-align:center}
+.flame{width:18px;height:46px;border-radius:50% 50% 40% 40%/70% 70% 30% 30%;background:linear-gradient(to top,var(--accent),#ffd27a);animation:flick .5s ease-in-out infinite alternate;transform-origin:bottom}
+@keyframes flick{from{transform:scaleY(.85) skewX(-4deg)}to{transform:scaleY(1.08) skewX(4deg)}}
+
+/* summary */
+.big{font-family:var(--display);font-weight:800;font-size:56px;color:var(--accent);line-height:1}
+.summary{text-align:center}
+
+/* history */
+.hist{display:flex;flex-direction:column}
+.hist .h{display:grid;grid-template-columns:1fr auto auto;gap:12px;padding:9px 0;border-top:1px solid var(--line);align-items:baseline}
+.hist .h:first-child{border-top:0}
+.hist .s{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist .lv{font-family:var(--mono);font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.hist .sc{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.saved{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:14px}
+
+@media (max-width:520px){
+  .q{grid-template-columns:1fr}
+  .panel{padding:18px}
+  .tile{width:72px}.tile .sym{font-size:26px}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .levels{grid-template-columns:repeat(2,1fr)}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+    <div>
+      <h1>Flame Test <span>Trivia</span></h1>
+      <div class="sub">Pick a subject and difficulty · answers revealed after you guess</div>
+    </div>
+    <button class="btn" type="button" id="settingsBtn" aria-expanded="false" aria-controls="settings">Settings</button>
+  </header>
+
+  <section class="panel" id="settings" hidden>
+    <h2>Settings</h2>
+    <form id="settingsForm" novalidate>
+      <div class="field"><label class="label" for="apiKey">Anthropic API key</label>
+        <input type="password" id="apiKey" autocomplete="off" spellcheck="false" placeholder="sk-ant-…" style="font:inherit;padding:12px 14px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink);width:100%">
+        <span style="font-size:13px;color:var(--muted)">Create one at <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener" style="color:var(--accent)">platform.claude.com → Settings → API keys</a>. It's stored only in this browser and sent only to Anthropic. A 10-question round costs a few cents.</span>
+      </div>
+      <div class="field"><label class="label" for="model">Model</label>
+        <input type="text" id="model" autocomplete="off" spellcheck="false" placeholder="claude-sonnet-5-5" style="font:inherit;padding:12px 14px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink);width:100%">
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <button class="btn primary" type="submit">Save</button>
+        <button class="btn" type="button" id="exportBtn">Back up scores</button>
+        <label class="btn" for="importFile" style="display:inline-block">Restore backup</label>
+        <input type="file" id="importFile" accept="application/json,.json" hidden>
+        <span id="settingsMsg" style="font-size:13px;color:var(--muted)"></span>
+      </div>
+    </form>
+  </section>
+
+  <section class="stats" aria-label="Cumulative results">
+    <div class="stat"><b id="sPts" class="acc">0</b><span class="label">Total points</span></div>
+    <div class="stat"><b id="sCor">0/0</b><span class="label">Correct</span></div>
+    <div class="stat"><b id="sAcc">—</b><span class="label">Accuracy</span></div>
+    <div class="stat"><b id="sRounds">0</b><span class="label">Rounds · best streak <span id="sStreak">0</span></span></div>
+  </section>
+
+  <main id="stage"></main>
+
+  <section class="panel" id="histPanel">
+    <h2>Past rounds</h2>
+    <div class="hist" id="hist"></div>
+  </section>
+
+  <div class="foot">
+    <span class="saved"><span id="saved">Saved in this browser</span> · web v13</span>
+    <div id="resetZone"></div>
+  </div>
+</div>
+
+<script>
+/* Calibrated against real labeled trivia (Open Trivia DB easy/medium/hard science sets) and
+   Jeopardy! solve rates by row (top row ~96% solved, bottom row ~71%). Bands are the share of
+   ordinary adults who'd answer correctly, given four choices. */
+/* Anchors mix subjects so non-science rounds are calibrated too. Sources: Open Trivia DB
+   labeled sets (science, history) and this player's own results. The "test" line is the
+   rule that separates each level from the next. */
+const LEVELS={
+  easy:{name:"Easy",pts:1,band:[82,100],target:88,
+    desc:"About 85-95% of ordinary adults would get it right.",
+    test:"The answer is a household name or school-level fact most adults could say without seeing the choices.",
+    anchors:["Who was the first President of the United States? (George Washington)","What is the largest planet in the solar system? (Jupiter)","Which organ pumps blood through the body? (heart)","Which ship carried the Pilgrims to America in 1620? (Mayflower)"]},
+  medium:{name:"Medium",pts:2,band:[65,85],target:75,
+    desc:"About 65-80% of ordinary adults would get it right. A small step up from Easy: still mainstream, famous material, just not the single most famous fact.",
+    test:"Most adults have HEARD of the answer and would recognize it among the four choices, even if they couldn't recall it unprompted. If the answer is a name or term most adults have never heard (e.g. Peace of Westphalia, Zheng He, Justinian), it is NOT Medium. No exact years or numbers as the answer.",
+    anchors:["Which country gave the Statue of Liberty to the United States? (France)","What disease paralyzed President Franklin D. Roosevelt? (polio)","The 1215 charter that limited King John's power is called what? (Magna Carta)","What is the name of Han Solo's ship in Star Wars? (Millennium Falcon)","Dry ice is the solid form of what? (carbon dioxide)","Which part of the brain coordinates balance? (cerebellum)"]},
+  hard:{name:"Hard",pts:3,band:[38,64],fanBand:[45,70],target:55,
+    desc:"A real step up from Medium. Measured against fans of the subject: a casual fan gets about half; a dedicated fan gets most.",
+    test:"Not the famous main characters, places or headline facts of the subject (those are Easy/Medium even for a niche subject like a film series or a book series). Use secondary characters, specific events, causes, and well-known-to-fans details.",
+    anchors:["What is Chewbacca's home planet in Star Wars? (Kashyyyk)","Whose 1919 eclipse observations supported general relativity? (Arthur Eddington)","Which 1648 agreement ended the Thirty Years' War? (Peace of Westphalia)","Which goblin helps Harry, Ron and Hermione break into Gringotts? (Griphook)"],
+    tooEasy:["Who is Luke Skywalker's father? (Darth Vader)","What is Harry Potter's owl called? (Hedwig)","Who is headmaster of Hogwarts for most of the series? (Dumbledore)"]},
+  expert:{name:"Expert",pts:5,band:[0,40],fanBand:[25,50],target:38,
+    desc:"Hard, but winnable. A dedicated fan or someone who studied the subject gets about a third to half right; a casual fan rarely does.",
+    test:"Deep knowledge of the subject's own core material: lesser-known characters and events from the books or films themselves, the deeper concepts a serious student learns. Everything must be findable in the main source material or a standard introduction to the field.",
+    anchors:["Who taught Care of Magical Creatures before Hagrid? (Silvanus Kettleburn)","What is the ~1.4 solar-mass upper limit for a white dwarf called? (Chandrasekhar limit)","In The Lord of the Rings, what is Aragorn's reforged sword called? (Andúril)","Which English king faced the Peasants' Revolt of 1381? (Richard II)"],
+    tooHard:["Who created the sound effects for the original Star Wars? (Ben Burtt)","Which experiment showed space quantization with a beam of silver atoms? (Stern-Gerlach)","What is the exact runtime in minutes of The Empire Strikes Back? (124)"],
+    never:"Never ask about behind-the-scenes production credits (animators, sequence directors, lyricists, software, studio technology), exact years or numbers, or one-line background names. Those make a question impossible, not expert."}
+};
+const IDEAS=["Astronomy","Aviation weather","Chemistry","Human anatomy","Geology","Physics","Computer science","Oceanography"];
+const KEY="flame-test-trivia-v2";
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ---------- diagnostics: one log doc per page load ---------- */
+const T0=Date.now(),LOADID=String(T0)+"-"+Math.random().toString(36).slice(2,6);
+let dbAll=null,logs=[],logTimer=null;
+function log(ev){
+  logs.push((Date.now()-T0)+"ms "+ev); if(logs.length>200)logs.shift();
+  clearTimeout(logTimer); logTimer=setTimeout(flushLog,800);
+}
+function flushLog(){if(dbAll){try{dbAll.doc("debuglog/"+LOADID).set({at:new Date(T0).toISOString(),ua:navigator.userAgent,events:logs.slice()}).catch(()=>{})}catch(e){}}}
+window.addEventListener("error",e=>{log("ERROR "+e.message+" @"+(e.lineno||"?"));showErr(e.message)});
+window.addEventListener("unhandledrejection",e=>{const r=e.reason;log("REJECT "+(r&&(r.code||r.message)||String(r)))});
+document.addEventListener("visibilitychange",()=>log("visibility "+document.visibilityState));
+window.addEventListener("pagehide",()=>{log("pagehide");flushLog()});
+function showErr(m){const z=$("saved");if(z)z.textContent="Error: "+m}
+const blank=()=>({totals:{answered:0,correct:0,points:0,rounds:0,bestStreak:0},streak:0,history:[],round:null,seen:{}});
+let state=blank(), view="setup", pending=null, form={subject:"",level:"medium",count:10};
+/* Scores are rebuilt from (a) a fixed baseline doc and (b) one saved record per answered question.
+   Records are only ever added, never overwritten, so an old copy of the page open somewhere
+   can't erase anything. The round in progress lives in its own doc. */
+let records=[], baseline=null, resetAt="", dbReady=false, ansCol=null, curDoc=null, setDoc=null, queue=[];
+function loadLocal(){try{const s=JSON.parse(localStorage.getItem(KEY)||"null");if(s&&s.records){records=s.records;baseline=s.baseline||null;resetAt=s.resetAt||"";state.round=s.round||null}}catch(e){}}
+function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify({records,baseline,resetAt,round:state.round}))}catch(e){}}
+function migrate(d){ // older single-doc formats -> baseline
+  if(d&&d.totals)return {at:new Date().toISOString(),totals:d.totals,history:d.history||[],seen:d.seen||{}};
+  if(d&&d.answers){const v=Object.values(d.answers),c=v.filter(x=>x.correct).length;
+    if(v.length)return {at:new Date().toISOString(),totals:{answered:v.length,correct:c,points:c,rounds:1,bestStreak:d.bestStreak||0},
+      history:[{subject:"Science (original set)",level:"easy",correct:c,total:v.length,points:c,at:new Date().toISOString()}],seen:{}}}
+  return null;
+}
+function rebuild(){
+  const recs=records.filter(r=>!resetAt||r.at>resetAt).sort((a,b)=>a.at<b.at?-1:1);
+  const base=baseline&&(!resetAt||baseline.at>resetAt)?baseline:null;
+  const t={answered:0,correct:0,points:0,rounds:0,bestStreak:0}, seen={}, rounds={};
+  if(base){Object.assign(t,base.totals);Object.entries(base.seen||{}).forEach(([k,v])=>{const kk=subjectKey(k);seen[kk]=(seen[kk]||[]).concat(v)})}
+  let run=0;
+  recs.forEach(r=>{
+    t.answered++; if(r.correct){t.correct++;t.points+=r.pts;run++;t.bestStreak=Math.max(t.bestStreak,run)}else run=0;
+    (seen[subjectKey(r.subject)]||(seen[subjectKey(r.subject)]=[])).push(r.line);
+    const g=rounds[r.round]||(rounds[r.round]={subject:r.subject,level:r.level,correct:0,total:0,points:0,at:r.at});
+    g.total++; if(r.correct){g.correct++;g.points+=r.pts} g.at=r.at;
+  });
+  const hist=Object.values(rounds); t.rounds+=hist.length;
+  state.totals=t; state.streak=run; state.seen=seen;
+  state.history=hist.sort((a,b)=>a.at<b.at?1:-1).concat(base?base.history:[]).slice(0,40);
+}
+/* this player's own hit rate per level, used to calibrate new questions */
+function perfFor(level,subject){
+  const k=subject?subjectKey(subject):null;
+  return records.filter(r=>(!resetAt||r.at>resetAt)&&r.level===level&&(!k||subjectKey(r.subject)===k)).slice(-30);
+}
+async function initDb(){ setSaved("Saved in this browser"); }
+async function flushQueue(){ queue.length=0; }
+function saveRecord(r){records.push(r);queue.push(r);saveLocal();flushQueue()}
+function saveRound(){saveLocal();if(dbReady&&curDoc)curDoc.set({round:state.round?JSON.parse(JSON.stringify(state.round)):null}).catch(()=>{})}
+function persist(){saveRound()}
+function setSaved(t){$("saved").textContent=t}
+
+/* ---------- question generation ---------- */
+/* ---------- settings + direct Claude API ---------- */
+const SKEY="flame-test-trivia-settings";
+function getSettings(){try{return JSON.parse(localStorage.getItem(SKEY)||"{}")}catch(e){return {}}}
+function putSettings(v){try{localStorage.setItem(SKEY,JSON.stringify(v))}catch(e){}}
+function apiErr(status,msg){
+  const m=String(msg||"");
+  if(status===401)return {code:"bad_key",message:m};
+  if(/credit|billing/i.test(m))return {code:"no_credit",message:m};
+  if(status===404)return {code:"bad_model",message:m};
+  if(status===429)return {code:"rate_limited",message:m};
+  if(status===529||status===503)return {code:"overloaded",message:m};
+  return {code:"api_error",message:(status?status+": ":"")+m};
+}
+/* Same shape the page used before: sample(prompt,{onText,signal}) -> {text}. */
+async function apiSample(prompt,opts){
+  const st=getSettings();
+  if(!st.key)throw {code:"no_key"};
+  let res;
+  try{
+    res=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",signal:opts.signal,
+      headers:{"content-type":"application/json","x-api-key":st.key,"anthropic-version":"2023-06-01",
+               "anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({model:st.model||"claude-sonnet-5-5",max_tokens:8000,stream:true,
+                           messages:[{role:"user",content:prompt}]})
+    });
+  }catch(e){ if(e&&e.name==="AbortError")throw {code:"cancelled"}; throw {code:"network",message:String(e&&e.message||e)} }
+  if(!res.ok){let m="";try{const j=await res.json();m=j.error&&j.error.message||""}catch(e){} throw apiErr(res.status,m)}
+  const reader=res.body.getReader(),dec=new TextDecoder();let buf="",text="";
+  try{
+    for(;;){
+      const {value,done}=await reader.read(); if(done)break;
+      buf+=dec.decode(value,{stream:true});
+      let i;
+      while((i=buf.indexOf("\n"))>=0){
+        const line=buf.slice(0,i).trim(); buf=buf.slice(i+1);
+        if(!line.startsWith("data:"))continue;
+        let ev; try{ev=JSON.parse(line.slice(5))}catch(e){continue}
+        if(ev.type==="content_block_delta"&&ev.delta&&typeof ev.delta.text==="string"){text+=ev.delta.text;opts.onText&&opts.onText({text,delta:ev.delta.text})}
+        else if(ev.type==="error")throw apiErr(0,ev.error&&ev.error.message);
+      }
+    }
+  }catch(e){ if(e&&e.name==="AbortError")throw {code:"cancelled",text}; if(e&&e.code)throw Object.assign(e,{text}); throw {code:"network",message:String(e),text} }
+  return {text};
+}
+function initSettings(){
+  const panel=$("settings"),btn=$("settingsBtn"),st=getSettings();
+  $("apiKey").value=st.key||""; $("model").value=st.model||"";
+  const show=v=>{panel.hidden=!v;btn.setAttribute("aria-expanded",String(v));if(v)$("apiKey").focus()};
+  btn.onclick=()=>show(panel.hidden);
+  $("settingsForm").onsubmit=e=>{e.preventDefault();
+    putSettings({key:$("apiKey").value.trim(),model:$("model").value.trim()});
+    $("settingsMsg").textContent="Saved"; setTimeout(()=>{$("settingsMsg").textContent="";show(false)},800)};
+  $("exportBtn").onclick=()=>{
+    const blob=new Blob([JSON.stringify({records,baseline,resetAt},null,1)],{type:"application/json"});
+    const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+    a.download="flame-test-trivia-scores-"+new Date().toISOString().slice(0,10)+".json";a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+  };
+  $("importFile").onchange=async e=>{
+    const f=e.target.files[0]; if(!f)return;
+    try{const d=JSON.parse(await f.text());
+      const ids=new Set(records.map(r=>r.id));
+      (d.records||[]).forEach(r=>{if(r&&r.id&&!ids.has(r.id))records.push(r)});
+      if(d.baseline&&!baseline)baseline=d.baseline;
+      saveLocal();rebuild();render();resetButton();
+      $("settingsMsg").textContent="Restored "+(d.records||[]).length+" answers";
+    }catch(err){$("settingsMsg").textContent="That file isn't a Flame Test Trivia backup."}
+    e.target.value="";
+  };
+  if(!st.key)show(true);
+}
+
+function shuffleQ(q){
+  const idx=[0,1,2,3].sort(()=>Math.random()-.5);
+  return {...q,c:idx.map(i=>q.c[i]),a:idx.indexOf(q.a)};
+}
+function norm(q){
+  if(!q||typeof q!=="object")return q;
+  const c=q.c||q.choices||q.options; let a=q.a??q.answer??q.correct;
+  if(typeof a==="string"&&Array.isArray(c)){const L="ABCD".indexOf(a.trim().toUpperCase());a=a.trim().length===1&&L>=0?L:c.findIndex(x=>String(x).trim().toLowerCase()===a.trim().toLowerCase())}
+  return {q:q.q||q.question,c:Array.isArray(c)?c.map(String):c,a:Number(a),x:q.x||q.explanation,sym:q.sym,cat:q.cat};
+}
+function valid(q){
+  return q&&typeof q.q==="string"&&Array.isArray(q.c)&&q.c.length===4&&q.c.every(x=>typeof x==="string"&&x.trim())&&Number.isInteger(q.a)&&q.a>=0&&q.a<4&&new Set(q.c.map(x=>x.trim().toLowerCase())).size===4;
+}
+/* Pull every complete {...} object out of streamed text, even before the array closes */
+function extractObjects(text){
+  const out=[]; const start=text.indexOf("["); if(start<0)return out;
+  let depth=0,inStr=false,esc2=false,objStart=-1;
+  for(let i=start+1;i<text.length;i++){
+    const ch=text[i];
+    if(inStr){ if(esc2)esc2=false; else if(ch==="\\")esc2=true; else if(ch==='"')inStr=false; continue }
+    if(ch==='"'){inStr=true;continue}
+    if(ch==="{"){if(depth===0)objStart=i;depth++}
+    else if(ch==="}"){depth--; if(depth===0&&objStart>=0){try{out.push(JSON.parse(text.slice(objStart,i+1)))}catch(e){out.push(null)}objStart=-1}}
+    else if(ch==="]"&&depth===0)break;
+  }
+  return out;
+}
+function prep(raw,subject){
+  const q=norm(raw); if(!valid(q))return null;
+  return shuffleQ({q:String(q.q).trim(),c:q.c.map(x=>x.trim()),a:q.a,x:String(q.x||""),sym:String(q.sym||subject.slice(0,2)).slice(0,3),cat:String(q.cat||subject).slice(0,24)});
+}
+function singular(w){
+  if(/sses$/.test(w))return w.slice(0,-2);
+  if(/ies$/.test(w))return w.slice(0,-3)+"y";
+  if(/(sh|ch|x|z|o)es$/.test(w))return w.slice(0,-2);
+  if(/(ss|us|is|ics)$/.test(w))return w;
+  if(/s$/.test(w))return w.slice(0,-1);
+  return w;
+}
+function subjectKey(sub){return sub.toLowerCase().replace(/[^a-z0-9 ]/g," ").replace(/\b\w{4,}\b/g,singular).replace(/\b(try|not|to|repeat|please|questions?|trivia|about|the|and|of)\b/g," ").replace(/\s+/g," ").trim()||sub.toLowerCase()}
+function seenFor(sub){const k=subjectKey(sub);return (state.seen&&state.seen[k])||[]}
+/* Use this player's real results to correct the level: if they score well above the target the
+   questions were too easy, well below means too hard. */
+const ORDER=["easy","medium","hard","expert"];
+function prevLevel(l){return LEVELS[ORDER[Math.max(0,ORDER.indexOf(l)-1)]]}
+function nextLevel(l){return LEVELS[ORDER[Math.min(3,ORDER.indexOf(l)+1)]]}
+function calibration(subject,level){
+  // Same subject only: doing well on Disney says nothing about History.
+  const L=LEVELS[level], recs=perfFor(level,subject), scope="on this subject";
+  if(recs.length<8)return "";
+  const pct=Math.round(recs.filter(r=>r.correct).length/recs.length*100);
+  const got=recs.filter(r=>r.correct).slice(-5).map(r=>"  + "+r.line).join("\n");
+  const miss=recs.filter(r=>!r.correct).slice(-5).map(r=>"  - "+r.line).join("\n");
+  const dir=pct>L.target+12?"a little easy for this player — make these slightly harder, while still passing the "+L.name+" level test":
+            pct<L.target-12?"too hard for this player — make these noticeably easier":
+            "about right — keep the same difficulty";
+  return `Calibration from this player's own results at ${L.name} ${scope}: ${pct}% correct over ${recs.length} questions (target ${L.target}%). That was ${dir}.
+Recent ones they got right:
+${got||"  (none)"}
+Recent ones they missed:
+${miss||"  (none)"}
+`;
+}
+function buildPrompt(subject,level,count){
+  const L=LEVELS[level], seen=seenFor(subject).slice(-150);
+  return `Write ${count} multiple-choice trivia questions.
+Subject: ${subject}
+Stay strictly on this exact subject. Every question must be about "${subject}" itself, not the wider category it belongs to. For example, "Disney Princess" means the princesses themselves (their stories, songs, companions, villains and voices as they relate to the princess), not other Disney films, Pixar, or the studio's history; "Volcanoes" means volcanoes, not geology in general. If you can't write enough questions on the exact subject at this level, write fewer rather than drifting.
+Difficulty: ${L.name}. ${L.desc}
+Level test: ${L.test}
+Examples at exactly this level, from unrelated subjects (they show difficulty only; do not take topics from them):
+${L.anchors.map(x=>"- "+x).join("\n")}
+${level!=="easy"?`For comparison, the level BELOW (${prevLevel(level).name}) looks like: ${prevLevel(level).anchors.slice(0,2).join("; ")}. Stay close to that step; do not jump two levels.\n`:""}${level!=="expert"?`For comparison, the level ABOVE (${nextLevel(level).name}) looks like: ${nextLevel(level).anchors.slice(0,2).join("; ")}. Anything that hard does not belong here.\n`:""}${L.tooEasy?`Too easy for ${L.name} (do NOT write questions like these): ${L.tooEasy.join("; ")}.\n`:""}${L.tooHard?`Too hard even for ${L.name} (do NOT write questions like these): ${L.tooHard.join("; ")}.\n`:""}${L.never?L.never+"\n":""}${calibration(subject,level)}${L.fanBand?`Also estimate the percentage of fans of this subject (people who chose to play it) who would answer correctly, and only keep questions inside ${L.fanBand[0]}-${L.fanBand[1]}%. Put that in "fan".\n`:""}Before writing each question, estimate the percentage of ordinary adults (a random person on the street, not a trivia fan) who would answer it correctly with four choices. Writers consistently overestimate what ordinary adults know, ${level==="expert"?"For Expert, the opposite risk matters more: if even dedicated fans would mostly miss it, it is too obscure, so drop it.":"so be conservative: if a question could fit this level or the harder one, it belongs to the harder one, so drop it."} Only keep questions inside ${L.band[0]}-${L.band[1]}%. Put that estimate in "pct".
+${seen.length?`The player has ALREADY been asked the questions below. Do not repeat any of these facts, answers, or near-rewordings of them; pick different sub-topics instead:
+${seen.map(x=>"- "+x).join("\n")}
+`:""}Rules:
+- Every fact must be accurate and well established. Skip anything disputed, ambiguous, or likely to have changed recently.
+- The question text must not contain the correct answer or give it away. Check every question for this before including it.
+- Exactly one correct choice and three plausible wrong ones of the same kind. No "all of the above" or "none of the above".
+- Spread across different parts of the subject (still within "${subject}"); no two questions about the same fact or with the same answer.
+- "sym": a 1-2 character tile label like a periodic-table symbol (e.g. "Ju" for Jupiter). "cat": a 1-2 word sub-topic.
+- "x": one or two sentences explaining why the answer is right, with a concrete detail.
+Return ONLY a JSON array, no prose, no code fences, in this shape:
+[{"q":"question","c":["choice","choice","choice","choice"],"a":0,"pct":65,"fan":80,"x":"explanation","sym":"Ab","cat":"Sub-topic"}]
+"a" is the 0-based index of the correct choice in "c".`;
+}
+/* ---------- duplicate detection ---------- */
+const STOP=new Set("a an the of in on at to for is are was were which what who whom whose how many much does do did by with from as that this these those its it be or and called known name".split(" "));
+function words(t){return new Set(String(t).toLowerCase().replace(/[^a-z0-9 ]/g," ").split(/\s+/).filter(w=>w.length>2&&!STOP.has(w)))}
+function overlap(a,b){if(!a.size||!b.size)return 0;let n=0;a.forEach(w=>{if(b.has(w))n++});return n/Math.min(a.size,b.size)}
+function isDup(q,pool){
+  const qa=String(q.c[q.a]).toLowerCase().trim(), qw=words(q.q);
+  return pool.some(p=>{
+    const m=p.match(/^(.*) → (.*)$/); if(!m)return false;
+    const pq=words(m[1]), pa=m[2].toLowerCase().trim();
+    const ov=overlap(qw,pq);
+    return ov>=0.7 || (pa===qa && ov>=0.34);
+  });
+}
+/* Reject a question whose text already contains its answer. */
+function givesAway(q){
+  const ans=String(q.c[q.a]).toLowerCase().replace(/^(the|a|an) /,"").replace(/[^a-z0-9 ]/g," ").trim();
+  if(ans.length<4)return false;
+  const text=" "+String(q.q).toLowerCase().replace(/[^a-z0-9 ]/g," ")+" ";
+  if(text.includes(" "+ans+" "))return true;
+  // multi-word names: the distinctive last word (e.g. "Ashman" in "Howard Ashman")
+  const parts=ans.split(/\s+/); const last=parts[parts.length-1];
+  return parts.length>1&&last.length>=5&&text.includes(" "+last+" ")&&!["theorem","effect","number","limit","temperature","experiment","constant"].includes(last);
+}
+function seenLine(q){return q.q.replace(/\s+/g," ").slice(0,140)+" → "+String(q.c[q.a]).slice(0,60)}
+/* Streams questions into the round as each one finishes. Resolves when Claude is done
+   (or when the closing bracket arrives, whichever is first). */
+function generate(sample,subject,level,count,onQuestion){
+  return new Promise((resolve,reject)=>{
+    let seen=0,settled=false,lastText="";
+    const finish=()=>{if(!settled){settled=true;resolve(lastText)}};
+    const ingest=text=>{
+      lastText=text;
+      const objs=extractObjects(text);
+      for(;seen<objs.length;seen++){const o=objs[seen];const q=o&&prep(o,subject);if(q){q.pct=Number(o.pct);q.fan=Number(o.fan);onQuestion(q)}}
+      const n=(text.match(/"q"\s*:/g)||[]).length;
+      setProgress(n?`${Math.min(n,count)} of ${count} written`:"Writing…");
+      if(/\]\s*(```)?\s*$/.test(text))finish();
+    };
+    const opts={modelTier:"default",cache:false,signal:abortCtl.signal,
+      onText:({text})=>{if(!gotText)log("first text");gotText=true;try{ingest(text)}catch(e){log("INGEST ERROR "+e.message);throw e}}};
+    sample(buildPrompt(subject,level,Math.min(count+5,20)),opts)
+      .then(r=>{if(r&&r.text)ingest(r.text);finish()})
+      .catch(e=>{if(e&&e.text)ingest(e.text);if(!settled){settled=true;reject(e)}});
+  });
+}
+let abortCtl=null,timer=null,ticker=null,gotText=false,step="";
+function setProgress(t){step=t;const el=$("progressText");if(el)el.textContent=t}
+function withTimeout(pr,ms,code){return Promise.race([pr,new Promise((_,rej)=>setTimeout(()=>rej({code}),ms))])}
+function startTicker(){
+  const t0=Date.now();
+  ticker=setInterval(()=>{
+    const sec=Math.round((Date.now()-t0)/1000),el=$("elapsed");
+    if(el)el.textContent=sec+" s";
+    if(!gotText&&sec===60)setProgress("Still no reply from Claude after 60 s. Check your connection, or tap Stop and try again.");
+  },1000);
+}
+function stopTimers(){clearTimeout(timer);clearInterval(ticker)}
+async function startRound(){
+  const box=$("subject"); if(box)form.subject=box.value;
+  const lv=document.querySelector("input[name=level]:checked"); if(lv)form.level=lv.value;
+  const ct=document.querySelector("input[name=count]:checked"); if(ct)form.count=+ct.value;
+  const subject=form.subject.trim(), level=form.level, count=form.count;
+  if(!subject){view="setup";render("Type a subject to start.");return}
+  // wait for saved scores first, so they can't overwrite the new round (max 8 s)
+
+
+
+  view="loading";gotText=false;render();
+  abortCtl=new AbortController();
+  timer=setTimeout(()=>abortCtl.abort(),180000);
+  startTicker();
+  let round=null;
+  log("startRound "+subject+" "+level+" "+count);
+  const band=LEVELS[level].band, prior=seenFor(subject); let dupSkips=0;
+  const onQuestion=q=>{
+    const fb=LEVELS[level].fanBand;
+    if(fb&&Number.isFinite(q.fan)){ if(q.fan<fb[0]-5||q.fan>fb[1]+5){log("skip off-level fan="+q.fan);return} }
+    else if(Number.isFinite(q.pct)&&(q.pct<band[0]-5||q.pct>band[1]+5)){log("skip off-level pct="+q.pct);return}
+    if(givesAway(q)){log("skip answer in question: "+q.q.slice(0,50));return}
+    const pool=prior.concat(round?round.questions.map(seenLine):[]);
+    if(isDup(q,pool)){dupSkips++;log("skip duplicate: "+q.q.slice(0,50));return}
+    log("question "+(round?round.questions.length+1:1));
+    if(!round){
+      round={subject,level,questions:[q],answers:{},cur:0,total:count,done:false,at:new Date().toISOString()};
+      state.round=round;view="play";stopTimers();render();persist();
+    }else if(state.round===round&&round.questions.length<count){
+      round.questions.push(q);
+      // refresh only if the player is waiting on the next question; otherwise just the progress bar
+      if(view==="play"&&round.answers[round.cur]&&round.cur===round.questions.length-2)render();else updateBar();
+    }
+  };
+  try{
+    if(!getSettings().key)throw {code:"no_key"};
+    setProgress("Waiting for Claude… this usually takes 10–40 seconds");
+    await generate(apiSample,subject,level,count,onQuestion);
+    log("generate resolved, round="+(round?round.questions.length:"none"));
+    stopTimers();
+    if(!round)throw {code:dupSkips?"all_repeats":"invalid_json"};
+    finalizeStream(round);
+  }catch(e){
+    stopTimers();
+    log("startRound catch "+(e&&(e.code||e.message)));
+    if(round){finalizeStream(round);return} // keep whatever questions arrived
+    if(abortCtl&&abortCtl.stoppedByUser){view="setup";render();return}
+    const msg=e&&e.code==="cancelled"?"Claude took longer than 3 minutes. Try again, or pick fewer questions."
+      :e&&e.code==="no_key"?"Add your Anthropic API key in Settings (top right) to start a round."
+      :e&&e.code==="bad_key"?"Your API key was rejected. Check it in Settings."
+      :e&&e.code==="no_credit"?"Your API account is out of credit. Add credit at platform.claude.com under Billing."
+      :e&&e.code==="bad_model"?"The model name in Settings wasn't found. Clear it to use the default."
+      :e&&e.code==="overloaded"?"Claude is busy right now. Try again in a minute."
+      :e&&e.code==="network"?"Couldn't reach Claude. Check your internet connection and try again."
+      :e&&e.code==="api_error"?"Claude returned an error: "+e.message
+      :e&&e.code==="rate_limited"?"Too many requests right now. Wait a minute, then try again."
+      :e&&e.code==="all_repeats"?"Every question Claude wrote was one you've already had on this subject. Tap Start round again, or try a narrower or different subject."
+      :"The questions didn't come back cleanly"+(e&&e.code?" ("+e.code+")":"")+". Try again, or reword the subject.";
+    view="setup";render(msg);
+  }
+}
+function finalizeStream(round){
+  if(round.done)return;
+  round.done=true; round.total=round.questions.length;
+  if(state.round===round&&view==="play")render();
+  persist();
+}
+function updateBar(){
+  const r=state.round,bar=document.querySelector(".progress");
+  if(!r||!bar||view!=="play")return;
+  bar.innerHTML=barHTML(r);
+  const m=$("metaCount");if(m)m.textContent=(r.cur+1)+" of "+(r.done?r.questions.length:r.total);
+}
+function barHTML(r){
+  const n=r.done?r.questions.length:Math.max(r.total||0,r.questions.length);
+  let h="";for(let i=0;i<n;i++){const a=r.answers[i];h+=`<span class="${a?(a.correct?"good":"bad"):(i===r.cur?"cur":(i>=r.questions.length?"pend":""))}"></span>`}
+  return h;
+}
+function startBuiltIn(){
+  const lvl=form.level, n=form.count;
+  const prior=seenFor("General science (built-in)");
+  let pool=BANK.filter(q=>!isDup(q,prior)); if(pool.length<3)pool=BANK.slice();
+  const qs=pool.sort(()=>Math.random()-.5).slice(0,Math.min(n,pool.length)).map(shuffleQ);
+  state.round={subject:"General science (built-in)",level:"easy",questions:qs,answers:{},cur:0,total:qs.length,done:true,at:new Date().toISOString()};
+  view="play";render();persist();
+}
+const BANK=[
+ {q:"Which planet in our solar system has the shortest day?",c:["Mercury","Earth","Jupiter","Neptune"],a:2,x:"Jupiter rotates once every 9 hours 56 minutes.",sym:"Ju",cat:"Astronomy"},
+ {q:"In the standard atmosphere, roughly how fast does temperature drop with altitude?",c:["1 °C per 1,000 ft","2 °C per 1,000 ft","3.5 °C per 1,000 ft","5 °C per 1,000 ft"],a:1,x:"The ISA lapse rate is 1.98 °C per 1,000 ft.",sym:"Lr",cat:"Atmosphere"},
+ {q:"Sound travels fastest through which of these?",c:["Air","Water","Steel","A vacuum"],a:2,x:"About 5,900 m/s in steel versus 343 m/s in air.",sym:"Sn",cat:"Physics"},
+ {q:"Which planet is less dense than water?",c:["Saturn","Uranus","Mars","Venus"],a:0,x:"Saturn averages about 0.69 g/cm³.",sym:"Sa",cat:"Astronomy"},
+ {q:"How many bones are in a typical adult human body?",c:["186","206","226","256"],a:1,x:"206; babies start with around 270 that fuse over time.",sym:"Bo",cat:"Biology"},
+ {q:"Which element has the chemical symbol Pb?",c:["Platinum","Phosphorus","Palladium","Lead"],a:3,x:"From the Latin plumbum.",sym:"Pb",cat:"Chemistry"},
+ {q:"About how long does sunlight take to reach Earth?",c:["8 seconds","8 minutes","80 minutes","8 hours"],a:1,x:"About 8 minutes 20 seconds.",sym:"Lt",cat:"Physics"},
+ {q:"Absolute zero is equal to what temperature in Celsius?",c:["−100 °C","−212 °C","−273.15 °C","−459.67 °C"],a:2,x:"−273.15 °C; −459.67 is the Fahrenheit value.",sym:"Az",cat:"Thermo"},
+ {q:"What is the most abundant element in the universe?",c:["Helium","Oxygen","Carbon","Hydrogen"],a:3,x:"Hydrogen is about 74% of ordinary mass.",sym:"H",cat:"Cosmology"},
+ {q:"Which blood type is the universal red-cell donor?",c:["AB positive","O negative","A negative","B positive"],a:1,x:"O negative cells carry no A, B, or Rh(D) antigens.",sym:"Bl",cat:"Biology"},
+ {q:"J.J. Thomson discovered which particle in 1897?",c:["Proton","Neutron","Electron","Photon"],a:2,x:"He found it using cathode-ray tubes.",sym:"e⁻",cat:"Physics"},
+ {q:"Who formulated the three laws of planetary motion?",c:["Galileo","Kepler","Newton","Tycho Brahe"],a:1,x:"Kepler, working from Tycho Brahe's data.",sym:"Ke",cat:"Astronomy"},
+ {q:"Which of these is NOT a noble gas?",c:["Helium","Neon","Nitrogen","Argon"],a:2,x:"Nitrogen is in group 15.",sym:"Ng",cat:"Chemistry"},
+ {q:"Roughly what percentage of Earth's atmosphere is nitrogen?",c:["21%","50%","78%","95%"],a:2,x:"About 78% nitrogen and 21% oxygen.",sym:"N",cat:"Atmosphere"},
+ {q:"What is the pH of pure water at 25 °C?",c:["0","5.6","7","14"],a:2,x:"7, which is neutral.",sym:"pH",cat:"Chemistry"},
+ {q:"Which planet has the hottest average surface temperature?",c:["Mercury","Venus","Mars","Jupiter"],a:1,x:"Venus averages about 465 °C due to its CO₂ atmosphere.",sym:"Ve",cat:"Astronomy"}
+];
+function answer(i){
+  const r=state.round,q=r.questions[r.cur];
+  if(r.answers[r.cur])return;
+  const ok=i===q.a,pts=ok?LEVELS[r.level].pts:0;
+  r.answers[r.cur]={choice:i,correct:ok};
+  if(!r.id)r.id="r"+Date.now().toString(36);
+  const at=new Date().toISOString();
+  saveRecord({id:"a"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),round:r.id,subject:r.subject,key:subjectKey(r.subject),
+    level:r.level,line:seenLine(q),correct:ok,pts,at});
+  rebuild();
+  render();saveRound();
+}
+function next(){
+  const r=state.round;
+  if(r.cur<r.questions.length-1){r.cur++;render();persist();return}
+  if(!r.done)return; // next question still being written
+  // round finished: log it, then show summary
+  const vals=Object.values(r.answers),c=vals.filter(v=>v.correct).length;
+  const entry={subject:r.subject,level:r.level,correct:c,total:vals.length,points:c*LEVELS[r.level].pts,at:new Date().toISOString()};
+  state.round=null;
+  pending=entry;view="summary";
+  render();persist();
+}
+function newRound(){form={subject:"",level:"medium",count:10};pending=null;view="setup";render();setTimeout(()=>{const s=$("subject");s&&s.focus()},0)}
+
+/* ---------- rendering ---------- */
+function renderStats(){
+  const t=state.totals;
+  $("sPts").textContent=t.points;
+  $("sCor").textContent=t.correct+"/"+t.answered;
+  $("sAcc").textContent=t.answered?Math.round(t.correct/t.answered*100)+"%":"—";
+  $("sRounds").textContent=t.rounds;
+  $("sStreak").textContent=t.bestStreak;
+  const h=$("hist");
+  $("histPanel").hidden=!state.history.length;
+  h.innerHTML=state.history.map(x=>`<div class="h"><span class="s">${esc(x.subject)}</span><span class="lv">${(LEVELS[x.level]||{name:x.level}).name}</span><span class="sc">${x.correct}/${x.total} · ${x.points} pts</span></div>`).join("");
+}
+function render(error){
+  try{ renderInner(error) }catch(e){ log("RENDER ERROR "+e.message); showErr(e.message); throw e }
+}
+function renderInner(error){
+  log("render "+view+(state.round?" q"+state.round.cur+"/"+state.round.questions.length+(state.round.done?" done":""):"")+(error?" err="+error.slice(0,40):""));
+  renderStats();
+  const st=$("stage");
+  if(view==="loading"){
+    st.innerHTML=`<section class="panel"><div class="loading" role="status"><div class="flame" aria-hidden="true"></div>
+      <div><b>Writing ${form.count} ${LEVELS[form.level].name.toLowerCase()} questions</b><div class="label" style="margin-top:4px">${esc(form.subject)}</div></div>
+      <div id="progressText" style="color:var(--muted);font-size:14px;max-width:46ch">${esc(step||"Starting…")}</div>
+      <div id="elapsed" class="label">0 s</div>
+      <button class="btn" id="stopBtn" type="button">Stop</button></div></section>`;
+    $("stopBtn").onclick=()=>{if(abortCtl){abortCtl.stoppedByUser=true;abortCtl.abort()}};
+    return;
+  }
+  if(view==="summary"&&pending){
+    const p=pending;
+    st.innerHTML=`<section class="panel summary">
+      <div class="label">${esc(p.subject)} · ${LEVELS[p.level].name}</div>
+      <div class="big" style="margin:10px 0 6px">${p.correct}/${p.total}</div>
+      <p style="margin:0">+${p.points} points this round · ${state.totals.points} total</p>
+      <div style="margin-top:18px"><button class="btn primary" id="again" type="button">New round</button></div></section>`;
+    $("again").onclick=newRound;
+    return;
+  }
+  if(view==="play"&&state.round){
+    const r=state.round,q=r.questions[r.cur],ans=r.answers[r.cur],L="ABCD";
+    st.innerHTML=`<section class="panel">
+      <div class="progress" aria-hidden="true">${barHTML(r)}</div>
+      <article class="q">
+        <div class="tile" aria-hidden="true"><span class="n"><span>${r.cur+1}</span><span>${LEVELS[r.level].pts}</span></span><span class="sym">${esc(q.sym)}</span><span class="nm">${esc(q.cat)}</span></div>
+        <div class="qbody">
+          <div class="label meta">${esc(r.subject)} · ${LEVELS[r.level].name} · <span id="metaCount">${r.cur+1} of ${r.done?r.questions.length:r.total}</span></div>
+          <p class="qtext">${esc(q.q)}</p>
+          <div class="choices">${q.c.map((c,i)=>{let cls="choice";if(ans){cls+=i===q.a?" right":i===ans.choice?" wrong":" dim"}
+            return `<button type="button" class="${cls}" data-i="${i}" ${ans?"disabled":""}><span class="k">${L[i]}</span><span>${esc(c)}</span></button>`}).join("")}</div>
+          ${ans?`<div class="reveal"><div class="verdict ${ans.correct?"good":"bad"}">${ans.correct?"Correct · +"+LEVELS[r.level].pts+" pts":"Not quite · answer is "+L[q.a]}</div>${q.x?`<p>${esc(q.x)}</p>`:""}</div>
+          <div style="margin-top:16px">${r.cur<r.questions.length-1?`<button type="button" class="btn primary" id="nextBtn">Next question →</button>`
+            :r.done?`<button type="button" class="btn primary" id="nextBtn">Finish round</button>`
+            :`<button type="button" class="btn primary" id="nextBtn" disabled>Next question is being written…</button>`}</div>`:""}
+        </div>
+      </article></section>`;
+    st.querySelectorAll(".choice:not(:disabled)").forEach(b=>b.onclick=()=>answer(+b.dataset.i));
+    const nb=$("nextBtn");if(nb)nb.onclick=next;
+    return;
+  }
+  // setup
+  st.innerHTML=`<section class="panel"><h2>Start a round</h2>
+    <form id="setup" novalidate>
+      <div class="field"><label class="label" for="subject">Subject</label>
+        <input type="text" id="subject" maxlength="80" autocomplete="off" autocapitalize="words" enterkeyhint="go" placeholder="e.g. Volcanoes, Jet engines, Genetics" value="${esc(form.subject)}">
+        <div class="ideas">${IDEAS.map(i=>`<button type="button" data-idea="${esc(i)}">${esc(i)}</button>`).join("")}</div>
+      </div>
+      <div class="field"><span class="label">Difficulty · points per correct answer</span>
+        <div class="levels">${Object.entries(LEVELS).map(([k,v])=>`<input type="radio" name="level" id="lv-${k}" value="${k}" ${form.level===k?"checked":""}><label for="lv-${k}"><b>${v.name}</b><small>${v.pts} pt${v.pts>1?"s":""}</small></label>`).join("")}</div>
+      </div>
+      <div class="field"><span class="label">Questions</span>
+        <div class="seg">${[5,10,15].map(n=>`<input type="radio" name="count" id="ct-${n}" value="${n}" ${form.count===n?"checked":""}><label for="ct-${n}">${n}</label>`).join("")}</div>
+      </div>
+      <button class="btn primary" type="submit" id="go">Start round</button>
+      ${error?`<p class="err" role="alert">${esc(error)}</p><button class="btn" type="button" id="builtIn" style="margin-top:10px">Play built-in science round</button>`:""}
+    </form></section>`;
+  const f=$("setup");
+  ["input","keyup","change","blur"].forEach(ev=>$("subject").addEventListener(ev,e=>form.subject=e.target.value));
+  f.querySelectorAll("[data-idea]").forEach(b=>b.onclick=()=>{form.subject=b.dataset.idea;$("subject").value=form.subject});
+  f.querySelectorAll("input[name=level]").forEach(r=>r.onchange=()=>form.level=r.value);
+  f.querySelectorAll("input[name=count]").forEach(r=>r.onchange=()=>form.count=+r.value);
+  f.onsubmit=e=>{e.preventDefault();startRound()};
+  const bi=$("builtIn"); if(bi)bi.onclick=startBuiltIn;
+}
+
+/* ---------- reset all ---------- */
+function resetButton(){
+  const z=$("resetZone");
+  z.innerHTML=`<button class="btn quiet" id="resetBtn" type="button">Erase all scores</button>`;
+  $("resetBtn").onclick=()=>{
+    z.innerHTML=`<div class="confirm"><span>Erase cumulative score and history?</span><button class="btn danger" id="yes" type="button">Erase</button><button class="btn" id="no" type="button">Cancel</button></div>`;
+    $("yes").onclick=async()=>{
+      resetAt=new Date().toISOString(); state.round=null; rebuild(); view="setup"; resetButton(); render(); saveRound();
+      if(dbReady&&setDoc)setDoc.set({resetAt}).catch(()=>{});
+    };
+    $("no").onclick=resetButton;
+  };
+}
+
+log("load "+navigator.userAgent.slice(0,80));
+loadLocal();
+log("local state round="+(state.round?state.round.questions.length:"none"));
+if(!state.totals){state=blank()}
+if(state.round&&!state.round.done){state.round.done=true;state.round.total=state.round.questions.length}
+rebuild();
+view=state.round?"play":"setup";
+render();resetButton();const dbInit=initDb();initSettings();
+</script>
+
+</body>
+</html>
