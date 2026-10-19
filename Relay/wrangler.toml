@@ -1,0 +1,13 @@
+# Only needed if you deploy from a terminal with Wrangler.
+# The Cloudflare dashboard steps in README.md don't use this file.
+name = "flametrivia-relay"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+[vars]
+ALLOWED_ORIGINS = "https://gibbymd.github.io"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "flametrivia"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"

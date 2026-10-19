@@ -1,6 +1,10 @@
 # Flame Test Trivia: website version
 
-Same game as the claude.ai page (v13): type any subject, pick Easy, Medium, Hard, or Expert, and play. Questions are written by Claude using your own Anthropic API key. Scores are saved in the browser you play in.
+Same game as the claude.ai page: type any subject, pick Easy, Medium, Hard, or Expert, and play. Scores are saved in the browser you play in.
+
+**Two ways it gets questions:**
+- **With the relay (recommended).** Set `const RELAY_URL="…"` near the top of the script in `index.html` to your relay's address (see `../Relay/README.md`). Players need no API key; your key, held by the relay, pays for new questions, and saved questions are reused for free.
+- **Without the relay.** Leave `RELAY_URL` empty, and each player enters their own Anthropic API key in Settings.
 
 ## Put it online (free, about 5 minutes) with Netlify Drop
 1. Find the **Web** folder (it contains `index.html` and this README).
@@ -11,7 +15,7 @@ Same game as the claude.ai page (v13): type any subject, pick Easy, Medium, Hard
 
 To update the site later, open it in Netlify, go to **Deploys**, and drag the new folder onto the deploy area.
 
-## First visit
+## First visit (without the relay)
 1. The **Settings** panel opens automatically. Paste your Anthropic API key (create one at https://platform.claude.com/settings/keys) and tap **Save**.
 2. Type a subject, pick a difficulty and number of questions, and tap **Start round**.
 3. On iPhone, tap Safari's **Share** button, then **Add to Home Screen**, to get an app icon.

@@ -101,6 +101,10 @@ h1 span{color:var(--accent)}
 .verdict{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:500}
 .verdict.good{color:var(--good)} .verdict.bad{color:var(--bad)}
 .reveal p{margin:6px 0 0;max-width:62ch}
+.report{margin-top:8px}
+.linkbtn{font:13px var(--body);color:var(--muted);background:none;border:0;padding:2px 0;text-decoration:underline;cursor:pointer}
+.linkbtn:hover{color:var(--ink)}
+.linkbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 .btn{font:500 14px var(--body);border-radius:6px;padding:10px 18px;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink)}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#1b1206}
@@ -153,11 +157,11 @@ h1 span{color:var(--accent)}
   <section class="panel" id="settings" hidden>
     <h2>Settings</h2>
     <form id="settingsForm" novalidate>
-      <div class="field"><label class="label" for="apiKey">Anthropic API key</label>
+      <div class="field" id="keyField"><label class="label" for="apiKey">Anthropic API key</label>
         <input type="password" id="apiKey" autocomplete="off" spellcheck="false" placeholder="sk-ant-…" style="font:inherit;padding:12px 14px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink);width:100%">
         <span style="font-size:13px;color:var(--muted)">Create one at <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener" style="color:var(--accent)">platform.claude.com → Settings → API keys</a>. It's stored only in this browser and sent only to Anthropic. A 10-question round costs a few cents.</span>
       </div>
-      <div class="field"><label class="label" for="model">Model</label>
+      <div class="field" id="modelField"><label class="label" for="model">Model</label>
         <input type="text" id="model" autocomplete="off" spellcheck="false" placeholder="claude-sonnet-5-5" style="font:inherit;padding:12px 14px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink);width:100%">
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
@@ -185,7 +189,7 @@ h1 span{color:var(--accent)}
   </section>
 
   <div class="foot">
-    <span class="saved"><span id="saved">Saved in this browser</span> · web v13</span>
+    <span class="saved"><span id="saved">Saved in this browser</span> · web v14</span>
     <div id="resetZone"></div>
   </div>
 </div>
@@ -281,6 +285,11 @@ function setSaved(t){$("saved").textContent=t}
 
 /* ---------- question generation ---------- */
 /* ---------- settings + direct Claude API ---------- */
+/* Address of the Flame Test Trivia relay (Cloudflare Worker). When set, players need no API key:
+   the relay holds the key and serves saved questions from the shared bank first.
+   Leave empty to have each player enter their own Anthropic API key in Settings. */
+const RELAY_URL="";
+const USE_RELAY=!!RELAY_URL;
 const SKEY="flame-test-trivia-settings";
 function getSettings(){try{return JSON.parse(localStorage.getItem(SKEY)||"{}")}catch(e){return {}}}
 function putSettings(v){try{localStorage.setItem(SKEY,JSON.stringify(v))}catch(e){}}
@@ -350,7 +359,8 @@ function initSettings(){
     }catch(err){$("settingsMsg").textContent="That file isn't a Flame Test Trivia backup."}
     e.target.value="";
   };
-  if(!st.key)show(true);
+  if(USE_RELAY){$("keyField").hidden=true;$("modelField").hidden=true;$("settingsForm").querySelector("button[type=submit]").hidden=true}
+  else if(!st.key)show(true);
 }
 
 function shuffleQ(q){
@@ -484,6 +494,37 @@ function generate(sample,subject,level,count,onQuestion){
       .catch(e=>{if(e&&e.text)ingest(e.text);if(!settled){settled=true;reject(e)}});
   });
 }
+/* Ask the relay for a round. Saved questions arrive at once; new ones stream in as Claude writes them. */
+async function relayRound(subject,level,count,onQuestion){
+  const k=subjectKey(subject), mine=records.filter(r=>(!resetAt||r.at>resetAt)&&subjectKey(r.subject)===k);
+  const recs=perfFor(level,subject);
+  const calibration=recs.length>=8?{pct:recs.filter(r=>r.correct).length/recs.length*100,n:recs.length,
+    got:recs.filter(r=>r.correct).slice(-5).map(r=>r.line),missed:recs.filter(r=>!r.correct).slice(-5).map(r=>r.line)}:null;
+  let res;
+  try{
+    res=await fetch(RELAY_URL.replace(/\/$/,"")+"/round",{method:"POST",signal:abortCtl.signal,headers:{"content-type":"application/json"},
+      body:JSON.stringify({subject,level,count,seenIds:mine.map(r=>r.qid).filter(Boolean).slice(-2000),
+        seenLines:seenFor(subject).slice(-300),calibration})});
+  }catch(e){ if(e&&e.name==="AbortError")throw {code:"cancelled"}; throw {code:"network",message:String(e&&e.message||e)} }
+  if(!res.ok){let j={};try{j=await res.json()}catch(e){} throw {code:j.code==="origin_blocked"?"relay_blocked":(j.code||"api_error"),message:j.message||("Relay error "+res.status)}}
+  const reader=res.body.getReader(),dec=new TextDecoder();let buf="",got=0,err=null;
+  try{
+    for(;;){
+      const {value,done}=await reader.read(); if(done)break;
+      buf+=dec.decode(value,{stream:true}); let i;
+      while((i=buf.indexOf("\n"))>=0){
+        const line=buf.slice(0,i).trim(); buf=buf.slice(i+1); if(!line)continue;
+        let ev; try{ev=JSON.parse(line)}catch(e){continue}
+        if(ev.type==="q"){const q=prep(ev.q,subject); if(q){q.id=ev.q.id;q.banked=!!ev.q.banked;got++;if(!gotText){gotText=true;log("first question")}onQuestion(q)}}
+        else if(ev.type==="status"){setProgress(got?`${got} of ${count} ready · writing the rest`:"Writing new questions…")}
+        else if(ev.type==="error"){err={code:ev.code,message:ev.message}}
+      }
+    }
+  }catch(e){ if(e&&e.name==="AbortError")throw {code:"cancelled"}; throw {code:"network",message:String(e)} }
+  if(err&&!got)throw err;
+  if(err)log("relay partial: "+err.code);
+}
+function relayPost(path,body){ if(!USE_RELAY)return Promise.resolve(); return fetch(RELAY_URL.replace(/\/$/,"")+path,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body),keepalive:true}).catch(()=>{}) }
 let abortCtl=null,timer=null,ticker=null,gotText=false,step="";
 function setProgress(t){step=t;const el=$("progressText");if(el)el.textContent=t}
 function withTimeout(pr,ms,code){return Promise.race([pr,new Promise((_,rej)=>setTimeout(()=>rej({code}),ms))])}
@@ -531,9 +572,10 @@ async function startRound(){
     }
   };
   try{
-    if(!getSettings().key)throw {code:"no_key"};
+    if(!USE_RELAY&&!getSettings().key)throw {code:"no_key"};
     setProgress("Waiting for Claude… this usually takes 10–40 seconds");
-    await generate(apiSample,subject,level,count,onQuestion);
+    if(USE_RELAY){ setProgress("Getting questions…"); await relayRound(subject,level,count,onQuestion); }
+    else await generate(apiSample,subject,level,count,onQuestion);
     log("generate resolved, round="+(round?round.questions.length:"none"));
     stopTimers();
     if(!round)throw {code:dupSkips?"all_repeats":"invalid_json"};
@@ -544,9 +586,14 @@ async function startRound(){
     if(round){finalizeStream(round);return} // keep whatever questions arrived
     if(abortCtl&&abortCtl.stoppedByUser){view="setup";render();return}
     const msg=e&&e.code==="cancelled"?"Claude took longer than 3 minutes. Try again, or pick fewer questions."
+      :e&&e.code==="relay_blocked"?"The question server doesn't recognize this site's address. Its ALLOWED_ORIGINS setting needs this page's address."
+      :e&&e.code==="not_configured"?"The question server isn't finished being set up (it has no API key yet)."
+      :e&&e.code==="busy"?"Claude is busy right now. Try again in a minute."
+      :e&&e.code==="server_error"?"The question server hit an error: "+e.message
+      :e&&e.code==="rate_limited"&&USE_RELAY?(e.message||"You've reached this hour's limit for new questions.")+" Try again later, or pick a subject you've played before."
       :e&&e.code==="no_key"?"Add your Anthropic API key in Settings (top right) to start a round."
-      :e&&e.code==="bad_key"?"Your API key was rejected. Check it in Settings."
-      :e&&e.code==="no_credit"?"Your API account is out of credit. Add credit at platform.claude.com under Billing."
+      :e&&e.code==="bad_key"?(USE_RELAY?"The question server's API key was rejected. It needs a new key.":"Your API key was rejected. Check it in Settings.")
+      :e&&e.code==="no_credit"?(USE_RELAY?"The game's API credit has run out. The owner needs to add credit.":"Your API account is out of credit. Add credit at platform.claude.com under Billing.")
       :e&&e.code==="bad_model"?"The model name in Settings wasn't found. Clear it to use the default."
       :e&&e.code==="overloaded"?"Claude is busy right now. Try again in a minute."
       :e&&e.code==="network"?"Couldn't reach Claude. Check your internet connection and try again."
@@ -608,7 +655,8 @@ function answer(i){
   if(!r.id)r.id="r"+Date.now().toString(36);
   const at=new Date().toISOString();
   saveRecord({id:"a"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),round:r.id,subject:r.subject,key:subjectKey(r.subject),
-    level:r.level,line:seenLine(q),correct:ok,pts,at});
+    level:r.level,line:seenLine(q),correct:ok,pts,at,qid:q.id||null});
+  if(q.id)relayPost("/result",{id:q.id,correct:ok});
   rebuild();
   render();saveRound();
 }
@@ -674,7 +722,7 @@ function renderInner(error){
           <p class="qtext">${esc(q.q)}</p>
           <div class="choices">${q.c.map((c,i)=>{let cls="choice";if(ans){cls+=i===q.a?" right":i===ans.choice?" wrong":" dim"}
             return `<button type="button" class="${cls}" data-i="${i}" ${ans?"disabled":""}><span class="k">${L[i]}</span><span>${esc(c)}</span></button>`}).join("")}</div>
-          ${ans?`<div class="reveal"><div class="verdict ${ans.correct?"good":"bad"}">${ans.correct?"Correct · +"+LEVELS[r.level].pts+" pts":"Not quite · answer is "+L[q.a]}</div>${q.x?`<p>${esc(q.x)}</p>`:""}</div>
+          ${ans?`<div class="reveal"><div class="verdict ${ans.correct?"good":"bad"}">${ans.correct?"Correct · +"+LEVELS[r.level].pts+" pts":"Not quite · answer is "+L[q.a]}</div>${q.x?`<p>${esc(q.x)}</p>`:""}${q.id&&USE_RELAY?`<div class="report" id="reportZone">${q.reported?`<span class="label">Reported · removed from the question bank</span>`:`<button type="button" class="linkbtn" id="reportBtn">Report a problem with this question</button>`}</div>`:""}</div>
           <div style="margin-top:16px">${r.cur<r.questions.length-1?`<button type="button" class="btn primary" id="nextBtn">Next question →</button>`
             :r.done?`<button type="button" class="btn primary" id="nextBtn">Finish round</button>`
             :`<button type="button" class="btn primary" id="nextBtn" disabled>Next question is being written…</button>`}</div>`:""}
@@ -682,6 +730,11 @@ function renderInner(error){
       </article></section>`;
     st.querySelectorAll(".choice:not(:disabled)").forEach(b=>b.onclick=()=>answer(+b.dataset.i));
     const nb=$("nextBtn");if(nb)nb.onclick=next;
+    const rb=$("reportBtn");if(rb)rb.onclick=()=>{
+      $("reportZone").innerHTML=`<span style="font-size:14px">Remove this question for everyone? </span><button type="button" class="linkbtn" id="repYes">Report it</button> <button type="button" class="linkbtn" id="repNo">Cancel</button>`;
+      $("repNo").onclick=()=>render();
+      $("repYes").onclick=()=>{q.reported=true;relayPost("/report",{id:q.id,reason:"player report"});saveRound();render()};
+    };
     return;
   }
   // setup
