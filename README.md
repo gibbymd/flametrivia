@@ -10,4 +10,4 @@ Multiple-choice trivia on any subject you type, at four calibrated difficulty le
 
 Scores are saved on each device. The website uses the relay when `RELAY_URL` is set in `Web/index.html`, so players need no API key. Without the relay, and in the iPhone app, each player enters their own Anthropic API key in Settings. No key is ever stored in this repo.
 
-The website is v15: it opens on a blank setup screen instead of resuming the last round. v14 added the relay and question bank. The iPhone app matches v13, plus the same blank-start change.
+The website is v16. It adds **Challenge someone**: the challenger's browser writes the questions, and players take turns by texting each other a link that carries the whole match, so the opponent needs no account, API key or relay. Each player answers in turn, and a question's result appears once both have answered it. v15 made the site open on a blank setup screen, and v14 added the relay and question bank. The iPhone app matches v13, plus the blank-start change, and has no challenge mode.

@@ -106,6 +106,14 @@ h1 span{color:var(--accent)}
 .linkbtn:hover{color:var(--ink)}
 .linkbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
+.choice.picked{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.duel{font-family:var(--mono);font-size:13px}
+.mrow{display:flex;justify-content:space-between;gap:12px;align-items:baseline;width:100%;text-align:left;font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:10px 12px;cursor:pointer}
+.mrow:hover{border-color:var(--accent)}
+.mrow:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mrow .s{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mrow .st{font-family:var(--mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);flex:none}
+.mrow .st.turn{color:var(--accent)}
 .btn{font:500 14px var(--body);border-radius:6px;padding:10px 18px;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink)}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#1b1206}
 .btn.primary:disabled{opacity:.5;cursor:default}
@@ -189,7 +197,7 @@ h1 span{color:var(--accent)}
   </section>
 
   <div class="foot">
-    <span class="saved"><span id="saved">Saved in this browser</span> · web v15</span>
+    <span class="saved"><span id="saved">Saved in this browser</span> · web v16</span>
     <div id="resetZone"></div>
   </div>
 </div>
@@ -334,7 +342,7 @@ async function apiSample(prompt,opts){
   }catch(e){ if(e&&e.name==="AbortError")throw {code:"cancelled",text}; if(e&&e.code)throw Object.assign(e,{text}); throw {code:"network",message:String(e),text} }
   return {text};
 }
-function initSettings(){
+function initSettings(fromLink){
   const panel=$("settings"),btn=$("settingsBtn"),st=getSettings();
   $("apiKey").value=st.key||""; $("model").value=st.model||"";
   const show=v=>{panel.hidden=!v;btn.setAttribute("aria-expanded",String(v));if(v)$("apiKey").focus()};
@@ -360,7 +368,7 @@ function initSettings(){
     e.target.value="";
   };
   if(USE_RELAY){$("keyField").hidden=true;$("modelField").hidden=true;$("settingsForm").querySelector("button[type=submit]").hidden=true}
-  else if(!st.key)show(true);
+  else if(!st.key&&!fromLink)show(true);
 }
 
 function shuffleQ(q){
@@ -525,7 +533,7 @@ async function relayRound(subject,level,count,onQuestion){
   if(err)log("relay partial: "+err.code);
 }
 function relayPost(path,body){ if(!USE_RELAY)return Promise.resolve(); return fetch(RELAY_URL.replace(/\/$/,"")+path,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body),keepalive:true}).catch(()=>{}) }
-let abortCtl=null,timer=null,ticker=null,gotText=false,step="";
+let abortCtl=null,timer=null,ticker=null,gotText=false,step="",loadingMode="solo";
 function setProgress(t){step=t;const el=$("progressText");if(el)el.textContent=t}
 function withTimeout(pr,ms,code){return Promise.race([pr,new Promise((_,rej)=>setTimeout(()=>rej({code}),ms))])}
 function startTicker(){
@@ -537,7 +545,8 @@ function startTicker(){
   },1000);
 }
 function stopTimers(){clearTimeout(timer);clearInterval(ticker)}
-async function startRound(){
+async function startRound(mode){
+  const challenge=mode==="challenge"; loadingMode=challenge?"challenge":"solo";
   const box=$("subject"); if(box)form.subject=box.value;
   const lv=document.querySelector("input[name=level]:checked"); if(lv)form.level=lv.value;
   const ct=document.querySelector("input[name=count]:checked"); if(ct)form.count=+ct.value;
@@ -551,8 +560,8 @@ async function startRound(){
   abortCtl=new AbortController();
   timer=setTimeout(()=>abortCtl.abort(),180000);
   startTicker();
-  let round=null;
-  log("startRound "+subject+" "+level+" "+count);
+  let round=null; const pack=[];
+  log("startRound "+subject+" "+level+" "+count+(challenge?" challenge":""));
   const band=LEVELS[level].band, prior=seenFor(subject); let dupSkips=0;
   const onQuestion=q=>{
     const fb=LEVELS[level].fanBand;
@@ -561,6 +570,7 @@ async function startRound(){
     if(givesAway(q)){log("skip answer in question: "+q.q.slice(0,50));return}
     const pool=prior.concat(round?round.questions.map(seenLine):[]);
     if(isDup(q,pool)){dupSkips++;log("skip duplicate: "+q.q.slice(0,50));return}
+    if(challenge){ if(pack.length<count&&!isDup(q,pack.map(seenLine))){pack.push(q);setProgress(`${pack.length} of ${count} ready`)} return }
     log("question "+(round?round.questions.length+1:1));
     if(!round){
       round={subject,level,questions:[q],answers:{},cur:0,total:count,done:false,at:new Date().toISOString()};
@@ -578,11 +588,13 @@ async function startRound(){
     else await generate(apiSample,subject,level,count,onQuestion);
     log("generate resolved, round="+(round?round.questions.length:"none"));
     stopTimers();
+    if(challenge){ if(!pack.length)throw {code:dupSkips?"all_repeats":"invalid_json"}; createMatch(subject,level,pack); return }
     if(!round)throw {code:dupSkips?"all_repeats":"invalid_json"};
     finalizeStream(round);
   }catch(e){
     stopTimers();
     log("startRound catch "+(e&&(e.code||e.message)));
+    if(challenge&&pack.length&&!(abortCtl&&abortCtl.stoppedByUser)){createMatch(subject,level,pack);return} // keep whatever questions arrived
     if(round){finalizeStream(round);return} // keep whatever questions arrived
     if(abortCtl&&abortCtl.stoppedByUser){view="setup";render();return}
     const msg=e&&e.code==="cancelled"?"Claude took longer than 3 minutes. Try again, or pick fewer questions."
@@ -694,13 +706,14 @@ function renderInner(error){
   const st=$("stage");
   if(view==="loading"){
     st.innerHTML=`<section class="panel"><div class="loading" role="status"><div class="flame" aria-hidden="true"></div>
-      <div><b>Writing ${form.count} ${LEVELS[form.level].name.toLowerCase()} questions</b><div class="label" style="margin-top:4px">${esc(form.subject)}</div></div>
+      <div><b>Writing ${form.count} ${LEVELS[form.level].name.toLowerCase()} questions${loadingMode==="challenge"?" for your challenge":""}</b><div class="label" style="margin-top:4px">${esc(form.subject)}</div></div>
       <div id="progressText" style="color:var(--muted);font-size:14px;max-width:46ch">${esc(step||"Starting…")}</div>
       <div id="elapsed" class="label">0 s</div>
       <button class="btn" id="stopBtn" type="button">Stop</button></div></section>`;
     $("stopBtn").onclick=()=>{if(abortCtl){abortCtl.stoppedByUser=true;abortCtl.abort()}};
     return;
   }
+  if(view==="match"&&matches[curMatch]){renderMatch(st);return}
   if(view==="summary"&&pending){
     const p=pending;
     st.innerHTML=`<section class="panel summary">
@@ -750,9 +763,12 @@ function renderInner(error){
       <div class="field"><span class="label">Questions</span>
         <div class="seg">${[5,10,15].map(n=>`<input type="radio" name="count" id="ct-${n}" value="${n}" ${form.count===n?"checked":""}><label for="ct-${n}">${n}</label>`).join("")}</div>
       </div>
-      <button class="btn primary" type="submit" id="go">Start round</button>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn primary" type="submit" id="go">Start round</button>
+        <button class="btn" type="button" id="challengeBtn">Challenge someone</button>
+      </div>
       ${error?`<p class="err" role="alert">${esc(error)}</p><button class="btn" type="button" id="builtIn" style="margin-top:10px">Play built-in science round</button>`:""}
-    </form></section>`;
+    </form>${matchListHTML()}</section>`;
   const f=$("setup");
   ["input","keyup","change","blur"].forEach(ev=>$("subject").addEventListener(ev,e=>form.subject=e.target.value));
   f.querySelectorAll("[data-idea]").forEach(b=>b.onclick=()=>{form.subject=b.dataset.idea;$("subject").value=form.subject});
@@ -760,6 +776,173 @@ function renderInner(error){
   f.querySelectorAll("input[name=count]").forEach(r=>r.onchange=()=>form.count=+r.value);
   f.onsubmit=e=>{e.preventDefault();startRound()};
   const bi=$("builtIn"); if(bi)bi.onclick=startBuiltIn;
+  $("challengeBtn").onclick=()=>startRound("challenge");
+  document.querySelectorAll("[data-match]").forEach(b=>b.onclick=()=>openMatch(b.dataset.match));
+}
+
+/* ---------- challenges: two players, turns passed by text message ----------
+   No server: the link carries the whole match (questions + both players' answers),
+   compressed after "#c=". Each device keeps its own copy and merges every link it opens.
+   Turn order ping-pongs: player 0 answers question 1 first, player 1 answers question 2 first,
+   and so on, so every text answers the other player's open question and opens a new one.
+   A question's result is shown only once both players have answered it. */
+const MKEY="flame-test-trivia-matches";
+let matches=(()=>{try{return JSON.parse(localStorage.getItem(MKEY)||"{}")||{}}catch(e){return {}}})();
+let curMatch=null, matchShow=null, matchMsg="";
+function saveMatches(){try{localStorage.setItem(MKEY,JSON.stringify(matches))}catch(e){}}
+const firstOf=i=>i%2;
+const nextIdx=(m,p)=>m.A[p].findIndex(x=>x==null);
+const canAnswer=(m,p,i)=>i>=0&&(firstOf(i)===p||m.A[1-p][i]!=null);
+const revealed=(m,i)=>m.A[0][i]!=null&&m.A[1][i]!=null;
+const complete=m=>m.qs.every((_,i)=>revealed(m,i));
+function mScores(m){const s=[0,0];m.qs.forEach((q,i)=>{if(revealed(m,i)){if(m.A[0][i]===q.a)s[0]++;if(m.A[1][i]===q.a)s[1]++}});return s}
+function mStatus(m){
+  if(complete(m)){const s=mScores(m);return {key:"done",text:`Final · you ${s[m.me]} · them ${s[1-m.me]}`}}
+  return canAnswer(m,m.me,nextIdx(m,m.me))?{key:"turn",text:"Your turn"}:{key:"wait",text:"Their turn"};
+}
+/* answers count toward your scores only once revealed, so totals can't give away a result early */
+function recordRevealed(m){
+  m.rec=m.rec||[];let any=false;
+  m.qs.forEach((q,i)=>{
+    if(!revealed(m,i)||m.rec[i])return;
+    const ok=m.A[m.me][i]===q.a,at=new Date().toISOString();
+    saveRecord({id:"a"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),round:"m"+m.id,subject:m.subject,key:subjectKey(m.subject),
+      level:m.level,line:seenLine(q),correct:ok,pts:ok?LEVELS[m.level].pts:0,at,qid:null});
+    m.rec[i]=true;any=true;
+  });
+  if(any)rebuild();
+}
+function createMatch(subject,level,qs){
+  const id=Math.random().toString(36).slice(2,10);
+  matches[id]={id,subject,level,me:0,at:new Date().toISOString(),
+    qs:qs.map(q=>({q:q.q,c:q.c,a:q.a,x:q.x||"",sym:q.sym||"",cat:q.cat||""})),
+    A:[qs.map(()=>null),qs.map(()=>null)],rec:[]};
+  saveMatches();openMatch(id);
+}
+function openMatch(id){curMatch=id;matchShow=null;matchMsg="";view="match";render();window.scrollTo(0,0)}
+
+/* ----- link packing ----- */
+function b64u(bytes){let s="";for(let i=0;i<bytes.length;i+=0x8000)s+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
+function unb64u(t){const s=atob(t.replace(/-/g,"+").replace(/_/g,"/"));const b=new Uint8Array(s.length);for(let i=0;i<s.length;i++)b[i]=s.charCodeAt(i);return b}
+async function packMatch(m){
+  const d={v:1,id:m.id,s:m.subject,l:m.level,f:m.me,
+    q:m.qs.map(q=>[q.q,...q.c,q.a,q.x,q.sym,q.cat]),
+    A:m.A.map(a=>a.map(x=>x==null?"-":String(x)).join(""))};
+  const raw=new TextEncoder().encode(JSON.stringify(d));
+  if(window.CompressionStream){
+    try{const z=new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream("deflate-raw"))).arrayBuffer());return "z"+b64u(z)}catch(e){}
+  }
+  return "j"+b64u(raw);
+}
+async function unpackMatch(t){
+  let bytes=unb64u(t.slice(1));
+  if(t[0]==="z")bytes=new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer());
+  const d=JSON.parse(new TextDecoder().decode(bytes));
+  if(!d||d.v!==1||!d.id||!Array.isArray(d.q)||!LEVELS[d.l])throw new Error("bad link");
+  const qs=d.q.map(r=>({q:String(r[0]),c:r.slice(1,5).map(String),a:Number(r[5]),x:String(r[6]||""),sym:String(r[7]||""),cat:String(r[8]||"")}));
+  if(!qs.every(valid))throw new Error("bad question");
+  const A=[0,1].map(p=>qs.map((_,i)=>{const ch=(d.A[p]||"")[i];return ch>="0"&&ch<="3"?+ch:null}));
+  return {id:String(d.id).slice(0,16),subject:String(d.s).slice(0,80),level:d.l,from:d.f===1?1:0,qs,A};
+}
+async function openLink(hash){
+  try{
+    const d=await unpackMatch(decodeURIComponent(hash.slice(3)));
+    let m=matches[d.id];
+    if(!m){m=matches[d.id]={id:d.id,subject:d.subject,level:d.level,me:1-d.from,at:new Date().toISOString(),qs:d.qs,A:d.A,rec:[]}}
+    else{for(const p of [0,1])d.A[p].forEach((x,i)=>{if(m.A[p][i]==null&&x!=null)m.A[p][i]=x})} // answers are never changed once given
+    m.at=new Date().toISOString();
+    recordRevealed(m);saveMatches();
+    try{history.replaceState(null,"",location.pathname+location.search)}catch(e){}
+    openMatch(d.id);
+  }catch(e){
+    log("bad challenge link "+(e&&e.message));
+    view="setup";render("That challenge link didn't open. It may have been cut off when it was sent; ask for it to be sent again.");
+  }
+}
+async function sendMatch(m){
+  const url=location.origin+location.pathname+"#c="+await packMatch(m);
+  const s=mScores(m), lv=LEVELS[m.level].name, n=m.qs.length;
+  const fresh=m.A[1].every(x=>x==null)&&m.me===0;
+  const text=complete(m)?`Final results are in for our ${m.subject} trivia match. Tap to see:`
+    :fresh?`Flame Test Trivia challenge: ${m.subject} (${lv}, ${n} questions). Your turn:`
+    :`Your turn in our ${m.subject} trivia match. Score so far: me ${s[m.me]}, you ${s[1-m.me]}.`;
+  m.sentAt=new Date().toISOString();if(complete(m))m.sentFinal=true;saveMatches();
+  if(navigator.share){
+    try{await navigator.share({text:text,url});matchMsg="Sent.";render();return}
+    catch(e){if(e&&e.name==="AbortError")return}
+  }
+  matchMsg="";render();
+  location.href="sms:?&body="+encodeURIComponent(text+" "+url);
+}
+async function copyMatchLink(m){
+  const url=location.origin+location.pathname+"#c="+await packMatch(m);
+  try{await navigator.clipboard.writeText(url);matchMsg="Link copied. Paste it into a text to your opponent."}
+  catch(e){matchMsg="Couldn't copy automatically. Use Send instead."}
+  render();
+}
+function answerMatch(choice){
+  const m=matches[curMatch],p=m.me,i=nextIdx(m,p);
+  if(!canAnswer(m,p,i))return;
+  m.A[p][i]=choice;m.at=new Date().toISOString();
+  recordRevealed(m);saveMatches();matchShow=i;matchMsg="";render();
+}
+function matchBar(m){
+  return m.qs.map((q,i)=>{const mine=m.A[m.me][i];
+    return `<span class="${revealed(m,i)?(mine===q.a?"good":"bad"):mine!=null?"cur":""}"></span>`}).join("");
+}
+function renderMatch(st){
+  const m=matches[curMatch],p=m.me,o=1-p,L="ABCD",lv=LEVELS[m.level],n=m.qs.length,s=mScores(m);
+  const head=`<div class="label meta">${esc(m.subject)} · ${lv.name} · Challenge · you ${s[p]} · them ${s[o]}</div>`;
+  const ni=nextIdx(m,p);
+  const i=matchShow!=null?matchShow:(canAnswer(m,p,ni)?ni:-1);
+  if(i>=0){
+    const q=m.qs[i],mine=m.A[p][i],theirs=m.A[o][i],both=revealed(m,i),after=nextIdx(m,p);
+    let reveal="";
+    if(mine!=null){
+      reveal=both?`<div class="reveal"><div class="verdict ${mine===q.a?"good":"bad"}">${mine===q.a?"Correct · +"+lv.pts+" pts":"Not quite · answer is "+L[q.a]}</div>
+          <p class="duel">You: <b>${L[mine]}</b> ${mine===q.a?"✓":"✗"} · Them: <b>${L[theirs]}</b> ${theirs===q.a?"✓":"✗"}</p>${q.x?`<p>${esc(q.x)}</p>`:""}</div>`
+        :`<div class="reveal"><div class="verdict">Answer locked in</div><p>You'll both see the result after your opponent answers.</p></div>`;
+      reveal+=`<div style="margin-top:16px"><button type="button" class="btn primary" id="mNext">${canAnswer(m,p,after)?"Next question →":"Continue"}</button></div>`;
+    }
+    st.innerHTML=`<section class="panel">
+      <div class="progress" aria-hidden="true">${matchBar(m)}</div>
+      <article class="q">
+        <div class="tile" aria-hidden="true"><span class="n"><span>${i+1}</span><span>${lv.pts}</span></span><span class="sym">${esc(q.sym||m.subject.slice(0,2))}</span><span class="nm">${esc(q.cat||m.subject)}</span></div>
+        <div class="qbody">${head.replace("Challenge ·","Challenge · "+(i+1)+" of "+n+" ·")}
+          ${theirs!=null&&mine==null?`<div class="label" style="color:var(--accent);margin-bottom:6px">Your opponent has answered this one</div>`:""}
+          <p class="qtext">${esc(q.q)}</p>
+          <div class="choices">${q.c.map((c,k)=>{let cls="choice";if(mine!=null){cls+=both?(k===q.a?" right":k===mine?" wrong":" dim"):(k===mine?" picked":" dim")}
+            return `<button type="button" class="${cls}" data-k="${k}" ${mine!=null?"disabled":""}><span class="k">${L[k]}</span><span>${esc(c)}</span></button>`}).join("")}</div>
+          ${reveal}
+        </div>
+      </article></section>`;
+    st.querySelectorAll(".choice:not(:disabled)").forEach(b=>b.onclick=()=>answerMatch(+b.dataset.k));
+    const nb=$("mNext");if(nb)nb.onclick=()=>{matchShow=null;render();window.scrollTo(0,0)};
+    return;
+  }
+  // between turns, or finished
+  const done=complete(m), owesFinal=done&&firstOf(n-1)!==p&&!m.sentFinal;
+  const win=s[p]>s[o]?"You win":s[p]<s[o]?"They win":"It's a tie";
+  st.innerHTML=`<section class="panel summary">
+      <div class="progress" aria-hidden="true">${matchBar(m)}</div>
+      ${head}
+      ${done?`<div class="big" style="margin:10px 0 6px">${s[p]}–${s[o]}</div><p style="margin:0"><b>${win}.</b> +${s[p]*lv.pts} points to your total.</p>`
+        :`<h2 style="margin:12px 0 6px">Their turn</h2><p style="margin:0 auto;max-width:46ch">Send your opponent the link. When they've answered, they'll send one back; open it to continue.</p>`}
+      ${!done||owesFinal?`<div style="margin-top:18px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <button class="btn primary" id="mSend" type="button">${done?"Send results to your opponent":m.sentAt?"Send again":"Send to your opponent"}</button>
+        <button class="btn" id="mCopy" type="button">Copy link</button></div>`:""}
+      ${matchMsg?`<p class="label" style="margin-top:12px">${esc(matchMsg)}</p>`:""}
+      <div style="margin-top:14px"><button class="btn ${done&&!owesFinal?"primary":"quiet"}" id="mBack" type="button">New round</button></div>
+    </section>`;
+  const sb=$("mSend");if(sb)sb.onclick=()=>sendMatch(m);
+  const cb=$("mCopy");if(cb)cb.onclick=()=>copyMatchLink(m);
+  $("mBack").onclick=newRound;
+}
+function matchListHTML(){
+  const list=Object.values(matches).sort((a,b)=>a.at<b.at?1:-1).slice(0,6);
+  if(!list.length)return "";
+  return `<div class="field mlist" style="margin:20px 0 0"><span class="label">Your challenges</span>
+    ${list.map(m=>{const st=mStatus(m);return `<button type="button" class="mrow" data-match="${esc(m.id)}"><span class="s">${esc(m.subject)} · ${LEVELS[m.level].name}</span><span class="st ${st.key}">${esc(st.text)}</span></button>`}).join("")}</div>`;
 }
 
 /* ---------- reset all ---------- */
@@ -786,7 +969,10 @@ if(state.round){log("discarding saved round on startup");state.round=null;saveLo
 form={subject:"",level:"medium",count:10};
 rebuild();
 view="setup";
-render();resetButton();const dbInit=initDb();initSettings();
+const fromLink=/^#c=/.test(location.hash);
+render();resetButton();const dbInit=initDb();initSettings(fromLink);
+if(fromLink)openLink(location.hash);
+window.addEventListener("hashchange",()=>{if(/^#c=/.test(location.hash))openLink(location.hash)});
 </script>
 
 </body>
