@@ -25,13 +25,9 @@ final class Game: ObservableObject {
 
     init(store: ScoreStore) {
         self.store = store
-        if let saved = store.file.round, !saved.questions.isEmpty {
-            var r = saved
-            r.doneWriting = true
-            r.expected = r.questions.count
-            round = r
-            phase = .play
-        }
+        // Always open on a clean setup screen: no subject pre-chosen and no old round resumed.
+        // Answers are saved one record at a time, so dropping the unfinished round loses no score.
+        if store.file.round != nil { store.setRound(nil) }
     }
 
     // MARK: Start a round

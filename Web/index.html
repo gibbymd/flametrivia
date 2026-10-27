@@ -189,7 +189,7 @@ h1 span{color:var(--accent)}
   </section>
 
   <div class="foot">
-    <span class="saved"><span id="saved">Saved in this browser</span> · web v14</span>
+    <span class="saved"><span id="saved">Saved in this browser</span> · web v15</span>
     <div id="resetZone"></div>
   </div>
 </div>
@@ -780,9 +780,12 @@ log("load "+navigator.userAgent.slice(0,80));
 loadLocal();
 log("local state round="+(state.round?state.round.questions.length:"none"));
 if(!state.totals){state=blank()}
-if(state.round&&!state.round.done){state.round.done=true;state.round.total=state.round.questions.length}
+/* Always open on a clean setup screen: no subject pre-chosen and no old round resumed.
+   Answers are saved one record at a time, so dropping the unfinished round loses no score. */
+if(state.round){log("discarding saved round on startup");state.round=null;saveLocal()}
+form={subject:"",level:"medium",count:10};
 rebuild();
-view=state.round?"play":"setup";
+view="setup";
 render();resetButton();const dbInit=initDb();initSettings();
 </script>
 
