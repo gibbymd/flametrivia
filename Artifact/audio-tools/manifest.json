@@ -1,0 +1,278 @@
+{
+ "armstrong": {
+  "start": 13.5,
+  "dur": 10.6,
+  "bytes": 87974,
+  "srclen": 24.1
+ },
+ "cardinal": {
+  "start": 10.2,
+  "dur": 11,
+  "bytes": 90970,
+  "srclen": 31.1
+ },
+ "loon": {
+  "start": 88.3,
+  "dur": 12,
+  "bytes": 99191,
+  "srclen": 130.6
+ },
+ "ghowl": {
+  "start": 0,
+  "dur": 12,
+  "bytes": 101276,
+  "srclen": 16.0
+ },
+ "barredowl": {
+  "start": 3.9,
+  "dur": 12,
+  "bytes": 100195,
+  "srclen": 62.9
+ },
+ "robin": {
+  "start": 23.8,
+  "dur": 11,
+  "bytes": 91037,
+  "srclen": 36.9
+ },
+ "dove": {
+  "start": 2.3,
+  "dur": 11,
+  "bytes": 90989,
+  "srclen": 30.9
+ },
+ "bluejay": {
+  "start": 25.9,
+  "dur": 10,
+  "bytes": 83205,
+  "srclen": 37.7
+ },
+ "chickadee": {
+  "start": 17.7,
+  "dur": 10,
+  "bytes": 83291,
+  "srclen": 31.4
+ },
+ "kookaburra": {
+  "start": 5.8,
+  "dur": 12,
+  "bytes": 99149,
+  "srclen": 45.5
+ },
+ "cuckoo": {
+  "start": 11.1,
+  "dur": 11,
+  "bytes": 91437,
+  "srclen": 24.0
+ },
+ "eagle": {
+  "start": 0,
+  "dur": 10,
+  "bytes": 82844,
+  "srclen": 10.1
+ },
+ "crane": {
+  "start": 4.7,
+  "dur": 12,
+  "bytes": 100186,
+  "srclen": 25.1
+ },
+ "raven": {
+  "start": 0,
+  "dur": 11,
+  "bytes": 92832,
+  "srclen": 12.6
+ },
+ "geese": {
+  "start": 4.8,
+  "dur": 11,
+  "bytes": 91027,
+  "srclen": 64.2
+ },
+ "turkey": {
+  "start": 121.0,
+  "dur": 8,
+  "bytes": 66474,
+  "srclen": 259.2
+ },
+ "blackbird": {
+  "start": 0.8,
+  "dur": 11,
+  "bytes": 91029,
+  "srclen": 19.9
+ },
+ "grouse": {
+  "start": 0,
+  "dur": 12.98,
+  "bytes": 107480,
+  "srclen": 13.0
+ },
+ "grizzly": {
+  "start": 0,
+  "dur": 10.56,
+  "bytes": 88000,
+  "srclen": 10.6
+ },
+ "humpback": {
+  "start": 12.5,
+  "dur": 14,
+  "bytes": 116471,
+  "srclen": 52.7
+ },
+ "peeper": {
+  "start": 16.8,
+  "dur": 10,
+  "bytes": 82808,
+  "srclen": 41.1
+ },
+ "howler": {
+  "start": 0.4,
+  "dur": 12,
+  "bytes": 99120,
+  "srclen": 24.8
+ },
+ "gibbon": {
+  "start": 3.4,
+  "dur": 12,
+  "bytes": 99182,
+  "srclen": 26.7
+ },
+ "coyote": {
+  "start": 0,
+  "dur": 12,
+  "bytes": 99107,
+  "srclen": 44.0
+ },
+ "elk": {
+  "start": 0,
+  "dur": 5.1,
+  "bytes": 42606,
+  "srclen": 5.1
+ },
+ "violin": {
+  "start": 0.7,
+  "dur": 13,
+  "bytes": 107283,
+  "srclen": 271.0
+ },
+ "cello": {
+  "start": 0.4,
+  "dur": 13,
+  "bytes": 107349,
+  "srclen": 154.7
+ },
+ "trumpets": {
+  "start": 0.4,
+  "dur": 14,
+  "bytes": 115424,
+  "srclen": 133.6
+ },
+ "oboe": {
+  "start": 4.6,
+  "dur": 12,
+  "bytes": 99169,
+  "srclen": 51.6
+ },
+ "bagpipes": {
+  "start": 1.1,
+  "dur": 13,
+  "bytes": 107487,
+  "srclen": 61.0
+ },
+ "sitar": {
+  "start": 0,
+  "dur": 12,
+  "bytes": 99132,
+  "srclen": 15.0
+ },
+ "didgeridoo": {
+  "start": 23.1,
+  "dur": 12,
+  "bytes": 99814,
+  "srclen": 38.1
+ },
+ "harpsichord": {
+  "start": 0.3,
+  "dur": 13,
+  "bytes": 107323,
+  "srclen": 300.3
+ },
+ "theremin": {
+  "start": 0,
+  "dur": 12,
+  "bytes": 99037,
+  "srclen": 14.2
+ },
+ "organ": {
+  "start": 0,
+  "dur": 14,
+  "bytes": 115651,
+  "srclen": 464.0
+ },
+ "harp": {
+  "start": 0,
+  "dur": 5.78,
+  "bytes": 48218,
+  "srclen": 5.8
+ },
+ "spitfire": {
+  "start": 19.5,
+  "dur": 12,
+  "bytes": 99190,
+  "srclen": 32.4
+ },
+ "merlin": {
+  "start": 0.1,
+  "dur": 12,
+  "bytes": 100193,
+  "srclen": 12.2
+ },
+ "airliner": {
+  "start": 37.0,
+  "dur": 14,
+  "bytes": 115532,
+  "srclen": 99.8
+ },
+ "helicopter": {
+  "start": 0.03,
+  "dur": 11.3,
+  "bytes": 95244,
+  "srclen": 11.3
+ },
+ "ingenuity": {
+  "start": 106.0,
+  "dur": 14,
+  "bytes": 115481,
+  "srclen": 150.0
+ },
+ "up844": {
+  "start": 26.0,
+  "dur": 12,
+  "bytes": 99477,
+  "srclen": 50.5
+ },
+ "eaglelanded": {
+  "start": 0,
+  "dur": 5.33,
+  "bytes": 44930,
+  "srclen": 5.3
+ },
+ "apollo13": {
+  "start": 0,
+  "dur": 16.55,
+  "bytes": 136600,
+  "srclen": 16.5
+ },
+ "sputnik": {
+  "start": 0,
+  "dur": 4.37,
+  "bytes": 36648,
+  "srclen": 4.4
+ },
+ "fdr": {
+  "start": 0,
+  "dur": 26.8,
+  "bytes": 213228,
+  "srclen": 26.8
+ }
+}
