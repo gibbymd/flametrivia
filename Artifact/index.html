@@ -1,0 +1,975 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Flame Test Trivia</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: lab-notebook graph paper; setup bench -> question tile -> round summary, cumulative ledger on top */
+:root{
+  --paper:#f3f6f8; --grid:#dbe4ea; --ink:#14283a; --muted:#566b7c; --card:#ffffff; --line:#c9d6df;
+  --accent:#e8890c;
+  --good:#1f8a5b; --good-bg:#e3f4ec; --bad:#c23b3b; --bad-bg:#fbe7e7;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#0e1b27; --grid:#172a3a; --ink:#e4edf3; --muted:#93a8b8; --card:#132433; --line:#24394b;
+  --accent:#f5a03a; --good:#4cc68d; --good-bg:#123a2a; --bad:#ee6b6b; --bad-bg:#3d1b1f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#0e1b27; --grid:#172a3a; --ink:#e4edf3; --muted:#93a8b8; --card:#132433; --line:#24394b;
+  --accent:#f5a03a; --good:#4cc68d; --good-bg:#123a2a; --bad:#ee6b6b; --bad-bg:#3d1b1f; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.5;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px}
+.wrap{max-width:720px;margin:0 auto;padding-block:28px 48px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;gap:22px}
+
+h1{font-family:var(--display);font-weight:800;font-size:clamp(28px,6vw,40px);line-height:1;margin:0;letter-spacing:-.02em}
+h1 span{color:var(--accent)}
+.sub{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-top:6px}
+.label{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.stat{background:var(--card);padding:10px 12px}
+.stat b{display:block;font-family:var(--mono);font-weight:500;font-size:22px;font-variant-numeric:tabular-nums}
+.stat b.acc{color:var(--accent)}
+
+.panel{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:22px}
+.panel h2{font-family:var(--display);font-weight:500;font-size:22px;margin:0 0 14px}
+
+/* setup */
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.field input[type=text]{font:inherit;font-size:17px;padding:12px 14px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink);width:100%}
+.field input[type=text]:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+.levels{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.levels input{position:absolute;opacity:0;pointer-events:none}
+.levels label{display:flex;flex-direction:column;gap:2px;border:1px solid var(--line);border-radius:6px;padding:10px;cursor:pointer;background:var(--paper)}
+.levels label b{font-weight:600}
+.levels label small{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.levels input:checked+label{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.levels input:focus-visible+label{outline:2px solid var(--accent);outline-offset:2px}
+.seg{display:flex;gap:8px}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label{border:1px solid var(--line);border-radius:6px;padding:8px 16px;cursor:pointer;background:var(--paper);font-family:var(--mono)}
+.seg input:checked+label{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.seg input:focus-visible+label{outline:2px solid var(--accent);outline-offset:2px}
+.ideas{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.ideas button{font:12.5px var(--body);border:1px dashed var(--line);background:transparent;color:var(--muted);border-radius:99px;padding:4px 10px;cursor:pointer}
+.ideas button:hover{color:var(--ink);border-color:var(--accent)}
+.err{color:var(--bad);font-size:14px;margin:10px 0 0}
+
+/* question */
+.progress{display:flex;gap:3px;height:8px;margin-bottom:18px}
+.progress span{flex:1;border-radius:2px;background:var(--line)}
+.progress span.pend{background:transparent;border:1px dashed var(--line)}
+.progress span.good{background:var(--good)} .progress span.bad{background:var(--bad)} .progress span.cur{background:var(--accent)}
+.q{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:start}
+.tile{width:92px;aspect-ratio:1;max-width:100%;border:2px solid var(--ink);border-radius:4px;padding:6px 8px;display:flex;flex-direction:column;justify-content:space-between;font-family:var(--mono)}
+.tile .n{font-size:12px;display:flex;justify-content:space-between}
+.tile .sym{font-family:var(--display);font-weight:800;font-size:34px;line-height:1;color:var(--accent);overflow:hidden}
+.tile .nm{font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qbody{min-width:0}
+.meta{margin-bottom:6px}
+.qtext{font-family:var(--display);font-weight:500;font-size:clamp(20px,4.4vw,25px);line-height:1.25;margin:0 0 18px;text-wrap:balance}
+.choices{display:grid;gap:10px}
+.choice{display:flex;gap:12px;align-items:center;text-align:left;width:100%;font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:12px 14px;cursor:pointer;transition:border-color .15s}
+.choice:hover:not(:disabled){border-color:var(--accent)}
+.choice:focus-visible,.btn:focus-visible,.ideas button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.choice .k{font-family:var(--mono);font-weight:500;width:26px;height:26px;flex:none;display:grid;place-items:center;border:1px solid var(--line);border-radius:50%;font-size:13px}
+.choice:disabled{cursor:default}
+.choice.right{background:var(--good-bg);border-color:var(--good)}
+.choice.right .k{background:var(--good);border-color:var(--good);color:var(--card)}
+.choice.wrong{background:var(--bad-bg);border-color:var(--bad)}
+.choice.wrong .k{background:var(--bad);border-color:var(--bad);color:var(--card)}
+.choice.dim{opacity:.55}
+.reveal{margin-top:16px;border-left:3px solid var(--accent);padding:4px 0 4px 14px}
+.verdict{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:500}
+.verdict.good{color:var(--good)} .verdict.bad{color:var(--bad)}
+.reveal p{margin:6px 0 0;max-width:62ch}
+
+/* audio questions */
+.aud{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:-6px 0 18px}
+.aud .btn{font-family:var(--mono);min-width:118px}
+.aud .btn.on{border-color:var(--accent);color:var(--accent)}
+.credit{font-size:12px;color:var(--muted);line-height:1.4;min-width:0;flex:1 1 220px}
+.credit a{color:inherit}
+.hint{font-size:12.5px;color:var(--muted);margin:2px 0 0}
+
+.choice.picked{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.duel{font-family:var(--mono);font-size:13px}
+.mrow{display:flex;justify-content:space-between;gap:12px;align-items:baseline;width:100%;text-align:left;font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:10px 12px;cursor:pointer}
+.mrow:hover{border-color:var(--accent)}
+.mrow:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mrow .s{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mrow .st{font-family:var(--mono);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);flex:none}
+.mrow .st.turn{color:var(--accent)}
+.btn{font:500 14px var(--body);border-radius:6px;padding:10px 18px;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#1b1206}
+.btn.primary:disabled{opacity:.5;cursor:default}
+.btn.quiet{border-color:transparent;color:var(--muted);padding-inline:8px}
+.btn.danger{border-color:var(--bad);color:var(--bad)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-top:18px}
+
+/* loading */
+.loading{display:flex;flex-direction:column;align-items:center;gap:14px;padding:30px 0;text-align:center}
+.flame{width:18px;height:46px;border-radius:50% 50% 40% 40%/70% 70% 30% 30%;background:linear-gradient(to top,var(--accent),#ffd27a);animation:flick .5s ease-in-out infinite alternate;transform-origin:bottom}
+@keyframes flick{from{transform:scaleY(.85) skewX(-4deg)}to{transform:scaleY(1.08) skewX(4deg)}}
+
+/* summary */
+.big{font-family:var(--display);font-weight:800;font-size:56px;color:var(--accent);line-height:1}
+.summary{text-align:center}
+
+/* history */
+.hist{display:flex;flex-direction:column}
+.hist .h{display:grid;grid-template-columns:1fr auto auto;gap:12px;padding:9px 0;border-top:1px solid var(--line);align-items:baseline}
+.hist .h:first-child{border-top:0}
+.hist .s{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hist .lv{font-family:var(--mono);font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.hist .sc{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.foot{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.saved{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:14px}
+
+@media (max-width:520px){
+  .q{grid-template-columns:1fr}
+  .panel{padding:18px}
+  .tile{width:72px}.tile .sym{font-size:26px}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .levels{grid-template-columns:repeat(2,1fr)}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Flame Test <span>Trivia</span></h1>
+    <div class="sub">Pick a subject and difficulty · answers revealed after you guess</div>
+  </header>
+
+  <section class="stats" aria-label="Cumulative results">
+    <div class="stat"><b id="sPts" class="acc">0</b><span class="label">Total points</span></div>
+    <div class="stat"><b id="sCor">0/0</b><span class="label">Correct</span></div>
+    <div class="stat"><b id="sAcc">—</b><span class="label">Accuracy</span></div>
+    <div class="stat"><b id="sRounds">0</b><span class="label">Rounds · best streak <span id="sStreak">0</span></span></div>
+  </section>
+
+  <main id="stage"></main>
+
+  <section class="panel" id="histPanel">
+    <h2>Past rounds</h2>
+    <div class="hist" id="hist"></div>
+  </section>
+
+  <div class="foot">
+    <span class="saved"><span id="saved">Loading saved results…</span> · v15</span>
+    <div id="resetZone"></div>
+  </div>
+</div>
+
+<script>
+/* Calibrated against real labeled trivia (Open Trivia DB easy/medium/hard science sets) and
+   Jeopardy! solve rates by row (top row ~96% solved, bottom row ~71%). Bands are the share of
+   ordinary adults who'd answer correctly, given four choices. */
+/* Anchors mix subjects so non-science rounds are calibrated too. Sources: Open Trivia DB
+   labeled sets (science, history) and this player's own results. The "test" line is the
+   rule that separates each level from the next. */
+const LEVELS={
+  easy:{name:"Easy",pts:1,band:[82,100],target:88,
+    desc:"About 85-95% of ordinary adults would get it right.",
+    test:"The answer is a household name or school-level fact most adults could say without seeing the choices.",
+    anchors:["Who was the first President of the United States? (George Washington)","What is the largest planet in the solar system? (Jupiter)","Which organ pumps blood through the body? (heart)","Which ship carried the Pilgrims to America in 1620? (Mayflower)"]},
+  medium:{name:"Medium",pts:2,band:[65,85],target:75,
+    desc:"About 65-80% of ordinary adults would get it right. A small step up from Easy: still mainstream, famous material, just not the single most famous fact.",
+    test:"Most adults have HEARD of the answer and would recognize it among the four choices, even if they couldn't recall it unprompted. If the answer is a name or term most adults have never heard (e.g. Peace of Westphalia, Zheng He, Justinian), it is NOT Medium. No exact years or numbers as the answer.",
+    anchors:["Which country gave the Statue of Liberty to the United States? (France)","What disease paralyzed President Franklin D. Roosevelt? (polio)","The 1215 charter that limited King John's power is called what? (Magna Carta)","What is the name of Han Solo's ship in Star Wars? (Millennium Falcon)","Dry ice is the solid form of what? (carbon dioxide)","Which part of the brain coordinates balance? (cerebellum)"]},
+  hard:{name:"Hard",pts:3,band:[38,64],fanBand:[45,70],target:55,
+    desc:"A real step up from Medium. Measured against fans of the subject: a casual fan gets about half; a dedicated fan gets most.",
+    test:"Not the famous main characters, places or headline facts of the subject (those are Easy/Medium even for a niche subject like a film series or a book series). Use secondary characters, specific events, causes, and well-known-to-fans details.",
+    anchors:["What is Chewbacca's home planet in Star Wars? (Kashyyyk)","Whose 1919 eclipse observations supported general relativity? (Arthur Eddington)","Which 1648 agreement ended the Thirty Years' War? (Peace of Westphalia)","Which goblin helps Harry, Ron and Hermione break into Gringotts? (Griphook)"],
+    tooEasy:["Who is Luke Skywalker's father? (Darth Vader)","What is Harry Potter's owl called? (Hedwig)","Who is headmaster of Hogwarts for most of the series? (Dumbledore)"]},
+  expert:{name:"Expert",pts:5,band:[0,40],fanBand:[25,50],target:38,
+    desc:"Hard, but winnable. A dedicated fan or someone who studied the subject gets about a third to half right; a casual fan rarely does.",
+    test:"Deep knowledge of the subject's own core material: lesser-known characters and events from the books or films themselves, the deeper concepts a serious student learns. Everything must be findable in the main source material or a standard introduction to the field.",
+    anchors:["Who taught Care of Magical Creatures before Hagrid? (Silvanus Kettleburn)","What is the ~1.4 solar-mass upper limit for a white dwarf called? (Chandrasekhar limit)","In The Lord of the Rings, what is Aragorn's reforged sword called? (Andúril)","Which English king faced the Peasants' Revolt of 1381? (Richard II)"],
+    tooHard:["Who created the sound effects for the original Star Wars? (Ben Burtt)","Which experiment showed space quantization with a beam of silver atoms? (Stern-Gerlach)","What is the exact runtime in minutes of The Empire Strikes Back? (124)"],
+    never:"Never ask about behind-the-scenes production credits (animators, sequence directors, lyricists, software, studio technology), exact years or numbers, or one-line background names. Those make a question impossible, not expert."}
+};
+const IDEAS=["Astronomy","Aviation weather","Chemistry","Human anatomy","Geology","Physics","Computer science","Oceanography"];
+const KEY="flame-test-trivia-v2";
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ---------- diagnostics: one log doc per page load ---------- */
+const T0=Date.now(),LOADID=String(T0)+"-"+Math.random().toString(36).slice(2,6);
+let dbAll=null,logs=[],logTimer=null;
+function log(ev){
+  logs.push((Date.now()-T0)+"ms "+ev); if(logs.length>200)logs.shift();
+  clearTimeout(logTimer); logTimer=setTimeout(flushLog,800);
+}
+function flushLog(){if(dbAll){try{dbAll.doc("debuglog/"+LOADID).set({at:new Date(T0).toISOString(),ua:navigator.userAgent,events:logs.slice()}).catch(()=>{})}catch(e){}}}
+window.addEventListener("error",e=>{log("ERROR "+e.message+" @"+(e.lineno||"?"));showErr(e.message)});
+window.addEventListener("unhandledrejection",e=>{const r=e.reason;log("REJECT "+(r&&(r.code||r.message)||String(r)))});
+document.addEventListener("visibilitychange",()=>log("visibility "+document.visibilityState));
+window.addEventListener("pagehide",()=>{log("pagehide");flushLog()});
+function showErr(m){const z=$("saved");if(z)z.textContent="Error: "+m}
+const blank=()=>({totals:{answered:0,correct:0,points:0,rounds:0,bestStreak:0},streak:0,history:[],round:null,seen:{}});
+const AKEY="flame-test-trivia-audio";
+let audioPref=(()=>{try{return localStorage.getItem(AKEY)==="1"}catch(e){return false}})();
+function setAudioPref(on){audioPref=!!on;form.audio=audioPref;try{localStorage.setItem(AKEY,on?"1":"0")}catch(e){}}
+let state=blank(), view="setup", pending=null, form={subject:"",level:"medium",count:10,audio:audioPref};
+/* Scores are rebuilt from (a) a fixed baseline doc and (b) one saved record per answered question.
+   Records are only ever added, never overwritten, so an old copy of the page open somewhere
+   can't erase anything. The round in progress lives in its own doc. */
+let records=[], baseline=null, resetAt="", dbReady=false, ansCol=null, curDoc=null, setDoc=null, queue=[];
+function loadLocal(){try{const s=JSON.parse(localStorage.getItem(KEY)||"null");if(s&&s.records){records=s.records;baseline=s.baseline||null;resetAt=s.resetAt||"";state.round=s.round||null}}catch(e){}}
+function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify({records,baseline,resetAt,round:state.round}))}catch(e){}}
+function migrate(d){ // older single-doc formats -> baseline
+  if(d&&d.totals)return {at:new Date().toISOString(),totals:d.totals,history:d.history||[],seen:d.seen||{}};
+  if(d&&d.answers){const v=Object.values(d.answers),c=v.filter(x=>x.correct).length;
+    if(v.length)return {at:new Date().toISOString(),totals:{answered:v.length,correct:c,points:c,rounds:1,bestStreak:d.bestStreak||0},
+      history:[{subject:"Science (original set)",level:"easy",correct:c,total:v.length,points:c,at:new Date().toISOString()}],seen:{}}}
+  return null;
+}
+function rebuild(){
+  const recs=records.filter(r=>!resetAt||r.at>resetAt).sort((a,b)=>a.at<b.at?-1:1);
+  const base=baseline&&(!resetAt||baseline.at>resetAt)?baseline:null;
+  const t={answered:0,correct:0,points:0,rounds:0,bestStreak:0}, seen={}, rounds={};
+  if(base){Object.assign(t,base.totals);Object.entries(base.seen||{}).forEach(([k,v])=>{const kk=subjectKey(k);seen[kk]=(seen[kk]||[]).concat(v)})}
+  let run=0;
+  recs.forEach(r=>{
+    t.answered++; if(r.correct){t.correct++;t.points+=r.pts;run++;t.bestStreak=Math.max(t.bestStreak,run)}else run=0;
+    (seen[subjectKey(r.subject)]||(seen[subjectKey(r.subject)]=[])).push(r.line);
+    const g=rounds[r.round]||(rounds[r.round]={subject:r.subject,level:r.level,correct:0,total:0,points:0,at:r.at});
+    g.total++; if(r.correct){g.correct++;g.points+=r.pts} g.at=r.at;
+  });
+  const hist=Object.values(rounds); t.rounds+=hist.length;
+  state.totals=t; state.streak=run; state.seen=seen;
+  state.history=hist.sort((a,b)=>a.at<b.at?1:-1).concat(base?base.history:[]).slice(0,40);
+}
+/* this player's own hit rate per level, used to calibrate new questions */
+function perfFor(level,subject){
+  const k=subject?subjectKey(subject):null;
+  return records.filter(r=>(!resetAt||r.at>resetAt)&&r.level===level&&(!k||subjectKey(r.subject)===k)).slice(-30);
+}
+async function initDb(){
+  try{
+    const api=window.claude;
+    if(!api||!api.use){setSaved("Saved in this browser");return}
+    const [db,user]=await Promise.all([api.use("db"),api.use("user")]);
+    const uid=user?await user.id():null;
+    if(!db||!uid){setSaved("Saved in this browser");return}
+    dbAll=db; log("db ready"); flushLog();
+    const col=db.collection("data/users/"+uid);
+    ansCol=db.collection("data/users/"+uid+"/log/answers");
+    curDoc=col.doc("current"); setDoc=col.doc("settings");
+    const [bSnap,sSnap,cSnap,aSnap]=await Promise.all([col.doc("baseline").get(),setDoc.get(),curDoc.get(),ansCol.limit(1000).get()]);
+    if(bSnap.exists)baseline=bSnap.data();
+    else{ // first run on this format: fold the old single-doc scores into a baseline once
+      const old=await col.doc("trivia").get();
+      baseline=old.exists?migrate(old.data()):null;
+      if(baseline)await col.doc("baseline").set(baseline);
+    }
+    resetAt=(sSnap.exists&&sSnap.data().resetAt)||"";
+    const remoteRecs=aSnap.docs.map(d=>d.data());
+    const ids=new Set(remoteRecs.map(r=>r.id));
+    records=remoteRecs.concat(records.filter(r=>!ids.has(r.id)&&queue.some(q=>q.id===r.id)));
+    // never resume a saved round on open; clear it so the page always starts on a blank setup screen
+    if(cSnap.exists&&cSnap.data().round&&!state.round)curDoc.set({round:null}).catch(()=>{});
+    dbReady=true; log("db loaded records="+remoteRecs.length+" baseline="+(baseline?baseline.totals.answered:0));
+    flushQueue();
+    rebuild(); saveLocal();
+    if(view==="setup")renderStats();
+    else render();
+    setSaved("Results saved to your account");
+  }catch(e){log("initDb error "+(e&&(e.code||e.message)));setSaved("Saved in this browser")}
+}
+async function flushQueue(){
+  if(!dbReady)return;
+  while(queue.length){const r=queue[0];try{await ansCol.doc(r.id).set(r);queue.shift()}catch(e){setSaved("Couldn't reach your account · will retry");return}}
+  setSaved("Results saved to your account");
+}
+function saveRecord(r){records.push(r);queue.push(r);saveLocal();flushQueue()}
+function saveRound(){saveLocal();if(dbReady&&curDoc)curDoc.set({round:state.round?JSON.parse(JSON.stringify(state.round)):null}).catch(()=>{})}
+function persist(){saveRound()}
+function setSaved(t){$("saved").textContent=t}
+
+/* ---------- question generation ---------- */
+function shuffleQ(q){
+  const idx=[0,1,2,3].sort(()=>Math.random()-.5);
+  return {...q,c:idx.map(i=>q.c[i]),a:idx.indexOf(q.a)};
+}
+function norm(q){
+  if(!q||typeof q!=="object")return q;
+  const c=q.c||q.choices||q.options; let a=q.a??q.answer??q.correct;
+  if(typeof a==="string"&&Array.isArray(c)){const L="ABCD".indexOf(a.trim().toUpperCase());a=a.trim().length===1&&L>=0?L:c.findIndex(x=>String(x).trim().toLowerCase()===a.trim().toLowerCase())}
+  return {q:q.q||q.question,c:Array.isArray(c)?c.map(String):c,a:Number(a),x:q.x||q.explanation,sym:q.sym,cat:q.cat};
+}
+function valid(q){
+  return q&&typeof q.q==="string"&&Array.isArray(q.c)&&q.c.length===4&&q.c.every(x=>typeof x==="string"&&x.trim())&&Number.isInteger(q.a)&&q.a>=0&&q.a<4&&new Set(q.c.map(x=>x.trim().toLowerCase())).size===4;
+}
+/* Pull every complete {...} object out of streamed text, even before the array closes */
+function extractObjects(text){
+  const out=[]; const start=text.indexOf("["); if(start<0)return out;
+  let depth=0,inStr=false,esc2=false,objStart=-1;
+  for(let i=start+1;i<text.length;i++){
+    const ch=text[i];
+    if(inStr){ if(esc2)esc2=false; else if(ch==="\\")esc2=true; else if(ch==='"')inStr=false; continue }
+    if(ch==='"'){inStr=true;continue}
+    if(ch==="{"){if(depth===0)objStart=i;depth++}
+    else if(ch==="}"){depth--; if(depth===0&&objStart>=0){try{out.push(JSON.parse(text.slice(objStart,i+1)))}catch(e){out.push(null)}objStart=-1}}
+    else if(ch==="]"&&depth===0)break;
+  }
+  return out;
+}
+function prep(raw,subject){
+  const q=norm(raw); if(!valid(q))return null;
+  return shuffleQ({q:String(q.q).trim(),c:q.c.map(x=>x.trim()),a:q.a,x:String(q.x||""),sym:String(q.sym||subject.slice(0,2)).slice(0,3),cat:String(q.cat||subject).slice(0,24)});
+}
+function singular(w){
+  if(/sses$/.test(w))return w.slice(0,-2);
+  if(/ies$/.test(w))return w.slice(0,-3)+"y";
+  if(/(sh|ch|x|z|o)es$/.test(w))return w.slice(0,-2);
+  if(/(ss|us|is|ics)$/.test(w))return w;
+  if(/s$/.test(w))return w.slice(0,-1);
+  return w;
+}
+function subjectKey(sub){return sub.toLowerCase().replace(/[^a-z0-9 ]/g," ").replace(/\b\w{4,}\b/g,singular).replace(/\b(try|not|to|repeat|please|questions?|trivia|about|the|and|of)\b/g," ").replace(/\s+/g," ").trim()||sub.toLowerCase()}
+function seenFor(sub){const k=subjectKey(sub);return (state.seen&&state.seen[k])||[]}
+/* Use this player's real results to correct the level: if they score well above the target the
+   questions were too easy, well below means too hard. */
+const ORDER=["easy","medium","hard","expert"];
+function prevLevel(l){return LEVELS[ORDER[Math.max(0,ORDER.indexOf(l)-1)]]}
+function nextLevel(l){return LEVELS[ORDER[Math.min(3,ORDER.indexOf(l)+1)]]}
+function calibration(subject,level){
+  // Same subject only: doing well on Disney says nothing about History.
+  const L=LEVELS[level], recs=perfFor(level,subject), scope="on this subject";
+  if(recs.length<8)return "";
+  const pct=Math.round(recs.filter(r=>r.correct).length/recs.length*100);
+  const got=recs.filter(r=>r.correct).slice(-5).map(r=>"  + "+r.line).join("\n");
+  const miss=recs.filter(r=>!r.correct).slice(-5).map(r=>"  - "+r.line).join("\n");
+  const dir=pct>L.target+12?"a little easy for this player — make these slightly harder, while still passing the "+L.name+" level test":
+            pct<L.target-12?"too hard for this player — make these noticeably easier":
+            "about right — keep the same difficulty";
+  return `Calibration from this player's own results at ${L.name} ${scope}: ${pct}% correct over ${recs.length} questions (target ${L.target}%). That was ${dir}.
+Recent ones they got right:
+${got||"  (none)"}
+Recent ones they missed:
+${miss||"  (none)"}
+`;
+}
+function buildPrompt(subject,level,count){
+  const L=LEVELS[level], seen=seenFor(subject).slice(-150);
+  return `Write ${count} multiple-choice trivia questions.
+Subject: ${subject}
+Stay strictly on this exact subject. Every question must be about "${subject}" itself, not the wider category it belongs to. For example, "Disney Princess" means the princesses themselves (their stories, songs, companions, villains and voices as they relate to the princess), not other Disney films, Pixar, or the studio's history; "Volcanoes" means volcanoes, not geology in general. If you can't write enough questions on the exact subject at this level, write fewer rather than drifting.
+Difficulty: ${L.name}. ${L.desc}
+Level test: ${L.test}
+Examples at exactly this level, from unrelated subjects (they show difficulty only; do not take topics from them):
+${L.anchors.map(x=>"- "+x).join("\n")}
+${level!=="easy"?`For comparison, the level BELOW (${prevLevel(level).name}) looks like: ${prevLevel(level).anchors.slice(0,2).join("; ")}. Stay close to that step; do not jump two levels.\n`:""}${level!=="expert"?`For comparison, the level ABOVE (${nextLevel(level).name}) looks like: ${nextLevel(level).anchors.slice(0,2).join("; ")}. Anything that hard does not belong here.\n`:""}${L.tooEasy?`Too easy for ${L.name} (do NOT write questions like these): ${L.tooEasy.join("; ")}.\n`:""}${L.tooHard?`Too hard even for ${L.name} (do NOT write questions like these): ${L.tooHard.join("; ")}.\n`:""}${L.never?L.never+"\n":""}${calibration(subject,level)}${L.fanBand?`Also estimate the percentage of fans of this subject (people who chose to play it) who would answer correctly, and only keep questions inside ${L.fanBand[0]}-${L.fanBand[1]}%. Put that in "fan".\n`:""}Before writing each question, estimate the percentage of ordinary adults (a random person on the street, not a trivia fan) who would answer it correctly with four choices. Writers consistently overestimate what ordinary adults know, ${level==="expert"?"For Expert, the opposite risk matters more: if even dedicated fans would mostly miss it, it is too obscure, so drop it.":"so be conservative: if a question could fit this level or the harder one, it belongs to the harder one, so drop it."} Only keep questions inside ${L.band[0]}-${L.band[1]}%. Put that estimate in "pct".
+${seen.length?`The player has ALREADY been asked the questions below. Do not repeat any of these facts, answers, or near-rewordings of them; pick different sub-topics instead:
+${seen.map(x=>"- "+x).join("\n")}
+`:""}Rules:
+- Every fact must be accurate and well established. Skip anything disputed, ambiguous, or likely to have changed recently.
+- The question text must not contain the correct answer or give it away. Check every question for this before including it.
+- Exactly one correct choice and three plausible wrong ones of the same kind. No "all of the above" or "none of the above".
+- Spread across different parts of the subject (still within "${subject}"); no two questions about the same fact or with the same answer.
+- "sym": a 1-2 character tile label like a periodic-table symbol (e.g. "Ju" for Jupiter). "cat": a 1-2 word sub-topic.
+- "x": one or two sentences explaining why the answer is right, with a concrete detail.
+Return ONLY a JSON array, no prose, no code fences, in this shape:
+[{"q":"question","c":["choice","choice","choice","choice"],"a":0,"pct":65,"fan":80,"x":"explanation","sym":"Ab","cat":"Sub-topic"}]
+"a" is the 0-based index of the correct choice in "c".`;
+}
+/* ---------- duplicate detection ---------- */
+const STOP=new Set("a an the of in on at to for is are was were which what who whom whose how many much does do did by with from as that this these those its it be or and called known name".split(" "));
+function words(t){return new Set(String(t).toLowerCase().replace(/[^a-z0-9 ]/g," ").split(/\s+/).filter(w=>w.length>2&&!STOP.has(w)))}
+function overlap(a,b){if(!a.size||!b.size)return 0;let n=0;a.forEach(w=>{if(b.has(w))n++});return n/Math.min(a.size,b.size)}
+function isDup(q,pool){
+  const qa=String(q.c[q.a]).toLowerCase().trim(), qw=words(q.q);
+  return pool.some(p=>{
+    const m=p.match(/^(.*) → (.*)$/); if(!m)return false;
+    const pq=words(m[1]), pa=m[2].toLowerCase().trim();
+    const ov=overlap(qw,pq);
+    return ov>=0.7 || (pa===qa && ov>=0.34);
+  });
+}
+/* Reject a question whose text already contains its answer. */
+function givesAway(q){
+  const ans=String(q.c[q.a]).toLowerCase().replace(/^(the|a|an) /,"").replace(/[^a-z0-9 ]/g," ").trim();
+  if(ans.length<4)return false;
+  const text=" "+String(q.q).toLowerCase().replace(/[^a-z0-9 ]/g," ")+" ";
+  if(text.includes(" "+ans+" "))return true;
+  // multi-word names: the distinctive last word (e.g. "Ashman" in "Howard Ashman")
+  const parts=ans.split(/\s+/); const last=parts[parts.length-1];
+  return parts.length>1&&last.length>=5&&text.includes(" "+last+" ")&&!["theorem","effect","number","limit","temperature","experiment","constant"].includes(last);
+}
+function seenLine(q){return q.q.replace(/\s+/g," ").slice(0,140)+" → "+String(q.c[q.a]).slice(0,60)}
+/* Streams questions into the round as each one finishes. Resolves when Claude is done
+   (or when the closing bracket arrives, whichever is first). */
+function generate(sample,subject,level,count,onQuestion){
+  return new Promise((resolve,reject)=>{
+    let seen=0,settled=false,lastText="";
+    const finish=()=>{if(!settled){settled=true;resolve(lastText)}};
+    const ingest=text=>{
+      lastText=text;
+      const objs=extractObjects(text);
+      for(;seen<objs.length;seen++){const o=objs[seen];const q=o&&prep(o,subject);if(q){q.pct=Number(o.pct);q.fan=Number(o.fan);onQuestion(q)}}
+      const n=(text.match(/"q"\s*:/g)||[]).length;
+      setProgress(n?`${Math.min(n,count)} of ${count} written`:"Writing…");
+      if(/\]\s*(```)?\s*$/.test(text))finish();
+    };
+    const opts={modelTier:"default",cache:false,signal:abortCtl.signal,
+      onText:({text})=>{if(!gotText)log("first text");gotText=true;try{ingest(text)}catch(e){log("INGEST ERROR "+e.message);throw e}}};
+    sample(buildPrompt(subject,level,Math.min(count+5,20)),opts)
+      .then(r=>{if(r&&r.text)ingest(r.text);finish()})
+      .catch(e=>{if(e&&e.text)ingest(e.text);if(!settled){settled=true;reject(e)}});
+  });
+}
+let abortCtl=null,timer=null,ticker=null,gotText=false,step="",loadingMode="solo";
+function setProgress(t){step=t;const el=$("progressText");if(el)el.textContent=t}
+function withTimeout(pr,ms,code){return Promise.race([pr,new Promise((_,rej)=>setTimeout(()=>rej({code}),ms))])}
+function startTicker(){
+  const t0=Date.now();
+  ticker=setInterval(()=>{
+    const sec=Math.round((Date.now()-t0)/1000),el=$("elapsed");
+    if(el)el.textContent=sec+" s";
+    if(!gotText&&sec===60)setProgress("Still no reply from Claude after 60 s. If no permission dialog appeared, tap Stop and play the built-in round, or open this page on claude.ai in a web browser.");
+  },1000);
+}
+function stopTimers(){clearTimeout(timer);clearInterval(ticker)}
+async function startRound(mode){
+  const challenge=mode==="challenge"; loadingMode=challenge?"challenge":"solo";
+  const box=$("subject"); if(box)form.subject=box.value;
+  const lv=document.querySelector("input[name=level]:checked"); if(lv)form.level=lv.value;
+  const ct=document.querySelector("input[name=count]:checked"); if(ct)form.count=+ct.value;
+  const au=document.querySelector("input[name=audio]:checked"); if(au)setAudioPref(au.value==="1");
+  const subject=form.subject.trim(), level=form.level, count=form.count;
+  if(!subject){view="setup";render("Type a subject to start.");return}
+  // wait for saved scores first, so they can't overwrite the new round (max 8 s)
+  const go=$("go"); if(go){go.disabled=true;go.textContent="Loading your scores…"}
+  await Promise.race([dbInit,new Promise(r=>setTimeout(r,8000))]);
+  log("db wait done");
+  view="loading";gotText=false;render();
+  abortCtl=new AbortController();
+  timer=setTimeout(()=>abortCtl.abort(),180000);
+  startTicker();
+  let round=null; const pack=[];
+  log("startRound "+subject+" "+level+" "+count+(challenge?" challenge":""));
+  const band=LEVELS[level].band, prior=seenFor(subject); let dupSkips=0;
+  const plan=audioPlan(subject,count), need=count-plan.clips.length, slotQ=plan.clips.slice();
+  if(plan.clips.length)log("audio clips "+plan.clips.map(q=>q.au).join(","));
+  // add a text question, then any clip whose slot comes next
+  const pushQ=(r,q)=>{r.questions.push(q);while(slotQ.length&&plan.slots[plan.clips.length-slotQ.length]===r.questions.length&&r.questions.length<count)r.questions.push(slotQ.shift())};
+  const onQuestion=q=>{
+    const fb=LEVELS[level].fanBand;
+    if(fb&&Number.isFinite(q.fan)){ if(q.fan<fb[0]-5||q.fan>fb[1]+5){log("skip off-level fan="+q.fan);return} }
+    else if(Number.isFinite(q.pct)&&(q.pct<band[0]-5||q.pct>band[1]+5)){log("skip off-level pct="+q.pct);return}
+    if(givesAway(q)){log("skip answer in question: "+q.q.slice(0,50));return}
+    const pool=prior.concat(round?round.questions.map(seenLine):[]);
+    if(isDup(q,pool)){dupSkips++;log("skip duplicate: "+q.q.slice(0,50));return}
+    if(challenge){ if(pack.length<need&&!isDup(q,pack.map(seenLine))){pack.push(q);setProgress(`${pack.length} of ${need} ready`)} return }
+    log("question "+(round?round.questions.length+1:1));
+    if(!round){
+      round={subject,level,questions:[],answers:{},cur:0,total:count,done:false,at:new Date().toISOString()};
+      pushQ(round,q);
+      state.round=round;view="play";stopTimers();render();persist();
+    }else if(state.round===round&&round.questions.length<count){
+      const before=round.questions.length;
+      pushQ(round,q);
+      // refresh only if the player is waiting on the next question; otherwise just the progress bar
+      if(view==="play"&&round.answers[round.cur]&&round.cur===before-1)render();else updateBar();
+    }
+  };
+  try{
+    setProgress("Connecting to Claude…");
+    const api=window.claude;
+    if(!api||!api.use)throw {code:"unavailable"};
+    const sample=await withTimeout(api.use("sample"),12000,"unavailable");
+    if(!sample)throw {code:"unavailable"};
+    let perm="unknown";
+    try{const perms=await withTimeout(api.use("permissions"),4000,"x");if(perms)perm=await withTimeout(perms.state("sample"),4000,"x")}catch(e){}
+    if(perm==="denied")throw {code:"not_granted"};
+    setProgress(perm==="prompt"?"A permission dialog should appear. Tap Allow so Claude can write your questions."
+      :"Waiting for Claude… this usually takes 10–60 seconds");
+    log("calling sample perm="+perm);
+    await generate(sample,subject,level,need,onQuestion);
+    log("generate resolved, round="+(round?round.questions.length:"none"));
+    stopTimers();
+    if(challenge){ if(!pack.length)throw {code:dupSkips?"all_repeats":"invalid_json"}; createMatch(subject,level,mergeClips(pack,plan)); return }
+    if(!round)throw {code:dupSkips?"all_repeats":"invalid_json"};
+    finalizeStream(round,slotQ);
+  }catch(e){
+    stopTimers();
+    log("startRound catch "+(e&&(e.code||e.message)));
+    if(challenge&&pack.length&&!(abortCtl&&abortCtl.stoppedByUser)){createMatch(subject,level,mergeClips(pack,plan));return} // keep whatever questions arrived
+    if(round){finalizeStream(round,slotQ);return} // keep whatever questions arrived
+    if(abortCtl&&abortCtl.stoppedByUser){view="setup";render();return}
+    const msg=e&&e.code==="cancelled"?"Claude took longer than 3 minutes. Try again, or pick fewer questions."
+      :e&&e.code==="not_granted"?"Claude needs your permission to write questions. Reload the page, tap Start round, and choose Allow."
+      :e&&e.code==="rate_limited"?"Too many requests right now. Wait a minute, then try again."
+      :e&&e.code==="all_repeats"?"Every question Claude wrote was one you've already had on this subject. Tap Start round again, or try a narrower or different subject."
+      :e&&e.code==="unavailable"?"This view can't reach Claude to write questions. Open the page on claude.ai in a web browser, or play the built-in round."
+      :"The questions didn't come back cleanly"+(e&&e.code?" ("+e.code+")":"")+". Try again, or reword the subject.";
+    view="setup";render(msg);
+  }
+}
+function finalizeStream(round,leftClips){
+  if(round.done)return;
+  // clips whose slot came after the last text question still get played, at the end
+  if(leftClips&&state.round===round)while(leftClips.length&&round.questions.length<round.total)round.questions.push(leftClips.shift());
+  round.done=true; round.total=round.questions.length;
+  if(state.round===round&&view==="play")render();
+  persist();
+}
+function updateBar(){
+  const r=state.round,bar=document.querySelector(".progress");
+  if(!r||!bar||view!=="play")return;
+  bar.innerHTML=barHTML(r);
+  const m=$("metaCount");if(m)m.textContent=(r.cur+1)+" of "+(r.done?r.questions.length:r.total);
+}
+function barHTML(r){
+  const n=r.done?r.questions.length:Math.max(r.total||0,r.questions.length);
+  let h="";for(let i=0;i<n;i++){const a=r.answers[i];h+=`<span class="${a?(a.correct?"good":"bad"):(i===r.cur?"cur":(i>=r.questions.length?"pend":""))}"></span>`}
+  return h;
+}
+function startBuiltIn(){
+  const lvl=form.level, n=form.count;
+  const prior=seenFor("General science (built-in)");
+  let pool=BANK.filter(q=>!isDup(q,prior)); if(pool.length<3)pool=BANK.slice();
+  const qs=pool.sort(()=>Math.random()-.5).slice(0,Math.min(n,pool.length)).map(shuffleQ);
+  state.round={subject:"General science (built-in)",level:"easy",questions:qs,answers:{},cur:0,total:qs.length,done:true,at:new Date().toISOString()};
+  view="play";render();persist();
+}
+const BANK=[
+ {q:"Which planet in our solar system has the shortest day?",c:["Mercury","Earth","Jupiter","Neptune"],a:2,x:"Jupiter rotates once every 9 hours 56 minutes.",sym:"Ju",cat:"Astronomy"},
+ {q:"In the standard atmosphere, roughly how fast does temperature drop with altitude?",c:["1 °C per 1,000 ft","2 °C per 1,000 ft","3.5 °C per 1,000 ft","5 °C per 1,000 ft"],a:1,x:"The ISA lapse rate is 1.98 °C per 1,000 ft.",sym:"Lr",cat:"Atmosphere"},
+ {q:"Sound travels fastest through which of these?",c:["Air","Water","Steel","A vacuum"],a:2,x:"About 5,900 m/s in steel versus 343 m/s in air.",sym:"Sn",cat:"Physics"},
+ {q:"Which planet is less dense than water?",c:["Saturn","Uranus","Mars","Venus"],a:0,x:"Saturn averages about 0.69 g/cm³.",sym:"Sa",cat:"Astronomy"},
+ {q:"How many bones are in a typical adult human body?",c:["186","206","226","256"],a:1,x:"206; babies start with around 270 that fuse over time.",sym:"Bo",cat:"Biology"},
+ {q:"Which element has the chemical symbol Pb?",c:["Platinum","Phosphorus","Palladium","Lead"],a:3,x:"From the Latin plumbum.",sym:"Pb",cat:"Chemistry"},
+ {q:"About how long does sunlight take to reach Earth?",c:["8 seconds","8 minutes","80 minutes","8 hours"],a:1,x:"About 8 minutes 20 seconds.",sym:"Lt",cat:"Physics"},
+ {q:"Absolute zero is equal to what temperature in Celsius?",c:["−100 °C","−212 °C","−273.15 °C","−459.67 °C"],a:2,x:"−273.15 °C; −459.67 is the Fahrenheit value.",sym:"Az",cat:"Thermo"},
+ {q:"What is the most abundant element in the universe?",c:["Helium","Oxygen","Carbon","Hydrogen"],a:3,x:"Hydrogen is about 74% of ordinary mass.",sym:"H",cat:"Cosmology"},
+ {q:"Which blood type is the universal red-cell donor?",c:["AB positive","O negative","A negative","B positive"],a:1,x:"O negative cells carry no A, B, or Rh(D) antigens.",sym:"Bl",cat:"Biology"},
+ {q:"J.J. Thomson discovered which particle in 1897?",c:["Proton","Neutron","Electron","Photon"],a:2,x:"He found it using cathode-ray tubes.",sym:"e⁻",cat:"Physics"},
+ {q:"Who formulated the three laws of planetary motion?",c:["Galileo","Kepler","Newton","Tycho Brahe"],a:1,x:"Kepler, working from Tycho Brahe's data.",sym:"Ke",cat:"Astronomy"},
+ {q:"Which of these is NOT a noble gas?",c:["Helium","Neon","Nitrogen","Argon"],a:2,x:"Nitrogen is in group 15.",sym:"Ng",cat:"Chemistry"},
+ {q:"Roughly what percentage of Earth's atmosphere is nitrogen?",c:["21%","50%","78%","95%"],a:2,x:"About 78% nitrogen and 21% oxygen.",sym:"N",cat:"Atmosphere"},
+ {q:"What is the pH of pure water at 25 °C?",c:["0","5.6","7","14"],a:2,x:"7, which is neutral.",sym:"pH",cat:"Chemistry"},
+ {q:"Which planet has the hottest average surface temperature?",c:["Mercury","Venus","Mars","Jupiter"],a:1,x:"Venus averages about 465 °C due to its CO₂ atmosphere.",sym:"Ve",cat:"Astronomy"}
+];
+function answer(i){
+  const r=state.round,q=r.questions[r.cur];
+  if(r.answers[r.cur])return;
+  const ok=i===q.a,pts=ok?LEVELS[r.level].pts:0;
+  r.answers[r.cur]={choice:i,correct:ok};
+  if(!r.id)r.id="r"+Date.now().toString(36);
+  const at=new Date().toISOString();
+  saveRecord({id:"a"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),round:r.id,subject:r.subject,key:subjectKey(r.subject),
+    level:r.level,line:seenLine(q),correct:ok,pts,at});
+  rebuild();
+  render();saveRound();
+}
+function next(){
+  const r=state.round;
+  if(r.cur<r.questions.length-1){r.cur++;render();persist();return}
+  if(!r.done)return; // next question still being written
+  // round finished: log it, then show summary
+  const vals=Object.values(r.answers),c=vals.filter(v=>v.correct).length;
+  const entry={subject:r.subject,level:r.level,correct:c,total:vals.length,points:c*LEVELS[r.level].pts,at:new Date().toISOString()};
+  state.round=null;
+  pending=entry;view="summary";
+  render();persist();
+}
+function newRound(){form={subject:"",level:"medium",count:10,audio:audioPref};pending=null;view="setup";render();setTimeout(()=>{const s=$("subject");s&&s.focus()},0)}
+
+/* ---------- audio questions ----------
+   Short public-domain / Creative Commons clips from Wikimedia Commons, stored as this artifact's
+   own assets (AAC in .mp4, the only audio container assets accept). Each clip carries one
+   question written for it, so the answer is known to be right. A clip joins a round only when
+   the subject matches one of its groups, and about a third of that round's questions become
+   clips. Challenge links carry the clip id, so opponents hear the same clip. */
+const AUDIO_GROUPS={
+  birds:/\b(birds?|birding|birdsong|birdsongs|bird ?calls?|bird ?songs?|ornithology|songbirds?|waterfowl|raptors?|birds of prey|bird watching|birdwatching)\b/,
+  animals:/\b(animals?|animal (sounds|calls|kingdom)|wildlife|wild animals|mammals?|zoology|zoo|safari|whales?|marine (life|mammals?|biology)|frogs?|amphibians?|primates?|monkeys?|apes?|nature sounds|north american wildlife|african wildlife|endangered species)\b/,
+  yellowstone:/\b(yellowstone|national parks?|rocky mountains?)\b/,
+  instruments:/\b(musical instruments?|instruments?|orchestras?|orchestral|symphon(y|ies)|classical music|music theory|woodwinds?|brass instruments?|string instruments?|percussion|world music|folk instruments?)\b|^music$/,
+  aircraft:/\b(aviation|aircraft|airplanes?|aeroplanes?|planes|airliners?|jets?|jet engines?|helicopters?|warbirds?|air ?force|flight|flying|pilots?|aerospace|military aircraft|airshows?|engines?)\b/,
+  space:/\b(space|spaceflight|space (race|exploration|program|history|travel)|apollo|nasa|moon landings?|the moon|astronauts?|rockets?|sputnik|mars|mars exploration)\b/,
+  history:/\b(american history|us history|u ?s history|united states history|20th century|twentieth century|1950s|1960s|cold war|kennedy)\b/,
+  ww2:/\b(world war (ii|2|two)|wwii|ww2|second world war|1940s|battle of britain|pearl harbor|warbirds?)\b/,
+  owls:/\b(owls?)\b/,
+  speeches:/\b(presidents?|presidential|us presidents|speeches|famous speeches|roosevelt|fdr|franklin roosevelt|great depression|new deal)\b/,
+  trains:/\b(trains?|railroads?|railways?|locomotives?|steam engines?|union pacific)\b/
+};
+const AUDIO_SKIP=/\b(weather|meteorolog|search engines?)\b/;
+const CLIPS=[{"id":"cardinal","g":["birds","animals"],"cat":"Birdsong","q":"Which bird is singing in this recording?","c":["Northern cardinal","American robin","Song sparrow","House finch"],"x":"Northern cardinals sing loud, clear whistled phrases like “cheer-cheer-cheer” or “birdy-birdy-birdy”. Unusually for North American songbirds, females sing too.","url":"/_blob/ab3f2be689d7375e2da929ede52e8c52","title":"Northern Cardinal (Cardinalis cardinalis) - Guelph-Eramosa, O…","by":"Ryan Hodnett","lic":"CC BY-SA 4.0","src":"https://commons.wikimedia.org/wiki/File:Northern_Cardinal_(Cardinalis_cardinalis)_-_Guelph-Eramosa,_Ontario_2020-05-20.mp3"},{"id":"loon","g":["birds","animals","yellowstone"],"cat":"Bird calls","q":"Which bird is calling in this recording?","c":["Common loon","Sandhill crane","Canada goose","Great blue heron"],"x":"This wavering, laugh-like call is the common loon’s tremolo, given when a loon is alarmed or disturbed. It was recorded on Yellowstone Lake.","url":"/_blob/c84956dc988357329903b51491eadcfa","title":"Yellowstone sound library - Common Loon - 001","by":"NPS & MSU Acoustic Atlas / Jennifer Jerrett","lic":"Public domain","src":"https://commons.wikimedia.org/wiki/File:Yellowstone_sound_library_-_Common_Loon_-_001.mp3"},{"id":"ghowl","g":["birds","animals","owls"],"cat":"Owls","q":"Which owl is hooting in this recording?","c":["Great horned owl","Barred owl","Snowy owl","Barn owl"],"x":"Great horned owls give a deep, soft series of four or five hoots. Barn owls screech rather than hoot.","url":"/_blob/f5eb224d389a378b835efc089f6751b5","title":"Bubo virginianus - Great Horned Owl XC450919","by":"Michael & Katie LaTour","lic":"CC BY-SA 4.0","src":"https://commons.wikimedia.org/wiki/File:Bubo_virginianus_-_Great_Horned_Owl_XC450919.mp3"},{"id":"barredowl","g":["birds","animals","owls"],"cat":"Owls","q":"Which owl is calling in this recording?","c":["Barred owl","Great horned owl","Eastern screech-owl","Burrowing owl"],"x":"The barred owl’s call is often remembered as “Who cooks for you? Who cooks for you-all?”","url":"/_blob/5d2aa835bd3e248bf222b206436eef39","title":"Strix varia - Barred Owl XC446889","by":"Michael & Katie LaTour","lic":"CC BY-SA 4.0","src":"https://commons.wikimedia.org/wiki/File:Strix_varia_-_Barred_Owl_XC446889.mp3"},{"id":"robin","g":["birds","animals","yellowstone"],"cat":"Birdsong","q":"Which bird is singing in this recording?","c":["American robin","Northern cardinal","Mourning dove","Blue jay"],"x":"The American robin’s song is a cheerful string of rising and falling phrases, often written as “cheerily, cheer up, cheerio”.","url":"/_blob/1d31e8deb37016ffc172e164acb7175a","title":"Yellowstone sound library - American Robin - 001","by":"NPS & MSU Acoustic Atlas / Jennifer Jerrett","lic":"Public domain","src":"https://commons.wikimedia.org/wiki/File:Yellowstone_sound_library_-_American_Robin_-_001.mp3"},{"id":"dove","g":["birds","animals"],"cat":"Birdsong","q":"Which bird is calling in this recording?","c":["Mourning dove","Great horned owl","Rock pigeon","Wild turkey"],"x":"The mourning dove’s soft, sad “coo-OO-oo, oo, oo” is often mistaken for an owl.","url":"/_blob/3031792d437a29b60ce094c64954bf95","title":"Zenaida macroura - Mourning Dove XC128006","by":"Jonathon Jongsma","lic":"CC BY-SA 3.0","src":"https://commons.wikimedia.org/wiki/File:Zenaida_macroura_-_Mourning_Dove_XC128006.ogg"},{"id":"bluejay","g":["birds","animals"],"cat":"Bird calls","q":"Which bird is calling in this recording?","c":["Blue jay","American crow","Northern mockingbird","Common grackle"],"x":"Besides its harsh “jay! jay!” scream, the blue jay has a musical, squeaky “queedle” call like this one.","url":"/_blob/f7acefa97fcaa0f7de269be03571a5cd","title":"Cyanocitta cristata - Blue Jay XC86756","by":"Jonathon Jongsma","lic":"CC BY-SA 3.0","src":"https://commons.wikimedia.org/wiki/File:Cyanocitta_cristata_-_Blue_Jay_XC86756.mp3"},{"id":"chickadee","g":["birds","animals"],"cat":"Birdsong","q":"Which small bird is whistling this clear two-note song?","c":["Black-capped chickadee","Tufted titmouse","White-breasted nuthatch","Dark-eyed junco"],"x":"This is the black-capped chickadee’s “fee-bee” song. The bird is named for its other well-known call, “chick-a-dee-dee-dee”.","url":"/_blob/5df9f3814777a578abca3b26af5a642c","title":"Poecile atricapillus - Black-capped Chickadee XC70185","by":"Jonathon Jongsma","lic":"CC BY-SA 3.0","src":"https://commons.wikimedia.org/wiki/File:Poecile_atricapillus_-_Black-capped_Chickadee_XC70185.mp3"},{"id":"kookaburra","g":["birds","animals"],"cat":"Bird calls","q":"What animal is making this “laughing” call?","c":["Laughing kookaburra","Spotted hyena","Howler monkey","Common loon"],"x":"The laughing kookaburra is a large Australian kingfisher. Family groups laugh together at dawn and dusk to mark their territory.","url":"/_blob/c8d7d7736ec406735460e5ae91f5de20","title":"LaughingKookaburra","by":"Kuco","lic":"Public domain","src":"https://commons.wikimedia.org/wiki/File:LaughingKookaburra.ogg"},{"id":"cuckoo","g":["birds","animals"],"cat":"Birdsong","q":"Which bird’s two-note song gave it its name?","c":["Common cuckoo","Eurasian hoopoe","Eastern whip-poor-will","Common chiffchaff"],"x":"The male common cuckoo’s “cuck-oo” is the sound copied by cuckoo clocks. Hoopoes, whip-poor-wills and chiffchaffs are also named for their calls.","url":"/_blob/21f221e42d88d7e51d9c893d209d752c","title":"Cuculus canorus - Common Cuckoo XC84060","by":"Alexander Kurthy","lic":"CC BY-SA 4.0","src":"https://commons.wikimedia.org/wiki/File:Cuculus_canorus_-_Common_Cuckoo_XC84060.mp3"},{"id":"eagle","g":["birds","animals","yellowstone"],"cat":"Raptors","q":"These high, thin chirps come from which large bird of prey?","c":["Bald eagle","Red-tailed hawk","Osprey","Great horned owl"],"x":"Bald eagles make weak-sounding, high whistles and chirps. Films often dub in the red-tailed hawk’s raspy scream instead.","url":"/_blob/92eba5a3392f92cd174a99f09a846871","title":"Yellowstone sound library - Bald Eagle - 003","by":"NPS & MSU Acoustic Atlas / Jennifer Jerrett","lic":"Public domain","src":"https://commons.wikimedia.org/wiki/File:Yellowstone_sound_library_-_Bald_Eagle_-_003.mp3"},{"id":"crane","g":["birds","animals","yellowstone"],"cat":"Bird calls","q":"Which bird is calling in this recording?","c":["Sandhill crane","Canada goose","Common loon","Trumpeter swan"],"x":"Sandhill cranes give a loud, rolling, bugling rattle that carries for miles; a long, coiled windpipe amplifies it.","url":"/_blob/90bc371c31330f01de766cad47ceac0a","title":"Yellowstone sound library - Sandhill Crane - 002","by":"NPS / Shan Burson","lic":"Public domain","src":"https://commons.wikimedia.org/wiki/File:Yellowstone_sound_library_-_Sandhill_Crane_-_002.mp3"},{"id":"raven","g":["birds","animals","yellowstone"],"cat":"Bird calls","q":"Which bird is calling in this recording?","c":["Common raven","American crow","Black-billed magpie","Steller’s jay"],"x":"Ravens give deep, hoarse croaks and gurgles, much lower than a crow’s “caw”.","url":"/_blob/b788b755708d018fac96e6e879f76941","title":"Yellowstone sound library - Common Raven - 001","by":"NPS / David Restivo","lic":"Public domain","src":"https://commons.wikimedia.org/wiki/File:Yellowstone_sound_library_-_Common_Raven_-_001.mp3"},{"id":"geese","g":["birds","animals","yellowstone"],"cat":"Bird calls","q":"Which birds are calling as they fly overhead?","c":["Canada geese","Sandhill cranes","Trumpeter swans","Mallards"],"x":"Canada geese honk to keep in touch while flying in their V formations.","url":"/_blob/0c9c70f02254b4f0f4bec3f5806bc485","title":"Yellowstone sound library - Canada Geese - 001","by":"NPS & MSU Acoustic Atlas / Jennifer Jerrett","lic":"Public domain","src":"https://commons.wikimedia.org/wiki/File:Yellowstone_sound_library_-_Canada_Geese_-_001.mp3"},{"id":"turkey","g":["birds","animals"],"cat":"Bird calls","q":"Which bird is calling in this recording?","c":["Wild turkey","Ruffed grouse","Ring-necked pheasant","Greater prairie-chicken"],"x":"Only male turkeys gobble, mostly in spring to attract hens. The gobble can carry about a mile.","url":"/_blob/ae2e7ef980cc02b4ec060f1d4f34b7bf","title":"Meleagris gallopavo - Wild Turkey XC134155","by":"Jonathon Jongsma","lic":"CC BY-SA 3.0","src":"https://commons.wikimedia.org/wiki/File:Meleagris_gallopavo_-_Wild_Turkey_XC134155.ogg"},{"id":"blackbird","g":["birds","animals","yellowstone"],"cat":"Birdsong","q":"Which bird is calling in this recording?","c":["Red-winged blackbird","Common grackle","Brown-headed cowbird","European starling"],"x":"The male red-winged blackbird’s “conk-la-ree!”, sung from a cattail while flashing red shoulder patches, is a classic marsh sound.","url":"/_blob/74d76349d15c4178493f5ac78d774b03","title":"Yellowstone sound library - Red-Winged Blackbird - 001","by":"NPS & MSU Acoustic Atlas / Jennifer Jerrett","lic":"Public domain","src":"https://commons.wikimedia.org/wiki/File:Yellowstone_sound_library_-_Red-Winged_Blackbird_-_001.mp3"},{"id":"grouse","g":["birds","animals","yellowstone"],"cat":"Birds","q":"This low drumming isn’t a voice. Which bird makes it by beating its wings?","c":["Ruffed grouse","Pileated woodpecker","Wild turkey","Sandhill crane"],"x":"A male ruffed grouse stands on a log and beats his wings, making thumps that speed up into a whirr. Woodpeckers drum with their bills instead.","url":"/_blob/cc44f3884f5cbfe20b7cc775b52222f5","title":"Yellowstone sound library - Ruffed Grouse - 001","by":"NPS & MSU Acoustic Atlas / Jennifer Jerrett","lic":"Public domain","src":"https://commons.wikimedia.org/wiki/File:Yellowstone_sound_library_-_Ruffed_Grouse_-_001.mp3"},{"id":"grizzly","g":["animals","yellowstone"],"cat":"Mammals","q":"Which Yellowstone animals are roaring at each other?","c":["Grizzly bears","Gray wolves","Mountain lions","Bull elk"],"x":"Two grizzly bears feeding on a bison carcass roared at each other while defending the food.","url":"/_blob/f4598ff073638dc1ae29dbdd1946d465","title":"Yellowstone sound library - Grizzly Bears Roar - 001","by":"NPS & MSU Acoustic Atlas / Jennifer Jerrett","lic":"Public domain","src":"https://commons.wikimedia.org/wiki/File:Yellowstone_sound_library_-_Grizzly_Bears_Roar_-_001.mp3"},{"id":"humpback","g":["animals"],"cat":"Marine life","q":"Which animal is making these sounds?","c":["Humpback whale","Bottlenose dolphin","Walrus","Elephant seal"],"x":"Humpback whales are famous for long, complex songs. This recording was made by researchers on an Antarctic feeding ground.","url":"/_blob/e5c1ba3f269d4782e42f76f0a595c685","title":"Humpback-Whale-Song-and-Foraging-Behavior-on-an-Antarctic-Fee…","by":"Stimpert, Peavey, Friedlaender & Nowacek (PLOS ONE)","lic":"CC BY 2.5","src":"https://commons.wikimedia.org/wiki/File:Humpback-Whale-Song-and-Foraging-Behavior-on-an-Antarctic-Feeding-Ground-pone.0051214.s001.oga"},{"id":"peeper","g":["animals"],"cat":"Amphibians","q":"This chorus is a sign of early spring in eastern North America. What is making it?","c":["Spring peeper frogs","Crickets","Cicadas","Bats"],"x":"Spring peepers are tree frogs about an inch (2.5 cm) long. Males peep loudly to attract mates, often in big choruses.","url":"/_blob/72eaeaa4c0674665f41fc1844d33ceb0","title":"Spring Peeper Frogs (Pseudacris crucifer) singing on night of…","by":"JohnDziak","lic":"CC0","src":"https://commons.wikimedia.org/wiki/File:Spring_Peeper_Frogs_(Pseudacris_crucifer)_singing_on_night_of_April_21_of_2019_in_North_Pittston_PA.ogg"},{"id":"howler","g":["animals"],"cat":"Primates","q":"Which animal is roaring in this recording?","c":["Howler monkey","Jaguar","Gorilla","Wild boar"],"x":"Howler monkeys are among the loudest land animals; an enlarged bone in the throat acts as a resonating chamber, and the calls carry for miles through rainforest.","url":"/_blob/11adab3d9ebfca1fa08f1ed3326c4024","title":"Howler monkey","by":"David O'Hara","lic":"CC BY 3.0","src":"https://commons.wikimedia.org/wiki/File:Howler_monkey.ogg"},{"id":"gibbon","g":["animals"],"cat":"Primates","q":"Which ape is making these whooping calls?","c":["Gibbon","Chimpanzee","Orangutan","Gorilla"],"x":"These are western hoolock gibbons, India’s only ape. Gibbons sing loud whooping calls from the treetops, often as duets between mates.","url":"/_blob/8c0652ff1649ac7bc67af68710e3f494","title":"Hoolock Gibbon Call","by":"Chinmayisk","lic":"CC BY-SA 4.0","src":"https://commons.wikimedia.org/wiki/File:Hoolock_Gibbon_Call.ogg"},{"id":"coyote","g":["animals"],"cat":"Mammals","q":"Which animals are howling and yipping at night?","c":["Coyotes","Gray wolves","Spotted hyenas","Red foxes"],"x":"Coyote packs mix high yips, barks and wavering howls. Two or three coyotes can sound like a much larger group.","url":"/_blob/790ffb8969c96bcc1e36bff24b260e94","title":"Pack of coyotes howling","by":"Rybkovich","lic":"CC BY-SA 4.0","src":"https://commons.wikimedia.org/wiki/File:Pack_of_coyotes_howling.ogg"},{"id":"elk","g":["animals"],"cat":"Mammals","q":"This high, squealing whistle is a mating call. Which animal makes it?","c":["Elk","Moose","Mule deer","Bighorn sheep"],"x":"Bull elk “bugle” during the autumn rut to attract cows and challenge rival bulls.","url":"/_blob/6a99faefedb7c81f0de702d05b9752b5","title":"American Elk Bugling","by":"Jim Pisarowicz / NPS","lic":"Public domain","src":"https://commons.wikimedia.org/wiki/File:American_Elk_Bugling.ogg"},{"id":"violin","g":["instruments"],"cat":"Strings","q":"Which instrument is playing this unaccompanied Bach piece?","c":["Violin","Cello","Double bass","Oboe"],"x":"This is the Adagio from J. S. Bach’s Violin Sonata No. 1 in G minor, BWV 1001, written for violin alone.","url":"/_blob/16c236c9c081e1165f0c996c1dd77f99","title":"J. S. Bach – Violin Sonata No.1 in G minor, BWV 1001, I. Adagio","by":"Unknown performer","lic":"CC0","src":"https://commons.wikimedia.org/wiki/File:J._S._Bach_%E2%80%93_Violin_Sonata_No.1_in_G_minor,_BWV_1001,_I._Adagio.ogg"},{"id":"cello","g":["instruments"],"cat":"Strings","q":"Which instrument is playing this famous Bach prelude?","c":["Cello","Violin","Classical guitar","Harp"],"x":"This is the Prelude to Bach’s Cello Suite No. 1 in G major, one of the best-known pieces for solo cello.","url":"/_blob/0e490e344795e4fdd258ae1b60e7d443","title":"Bach Cello Suite 1 Prelude (BWV 1007) Played by Chris","by":"Fopseh","lic":"CC0","src":"https://commons.wikimedia.org/wiki/File:Bach_Cello_Suite_1_Prelude_(BWV_1007)_Played_by_Chris.ogg"},{"id":"trumpets","g":["instruments"],"cat":"Brass","q":"What tune are these herald trumpets playing?","c":["The Star-Spangled Banner","America the Beautiful","Hail to the Chief","My Country, ’Tis of Thee"],"x":"The U.S. Army Herald Trumpets play “The Star-Spangled Banner”. Its melody is John Stafford Smith’s “To Anacreon in Heaven”.","url":"/_blob/e5a781c5d4b334fba7836f749ad2fcb1","title":"The Star-Spangled Banner - U.S. Army Herald Trumpets","by":"U.S. Army Herald Trumpets","lic":"Public domain","src":"https://commons.wikimedia.org/wiki/File:The_Star-Spangled_Banner_-_U.S._Army_Herald_Trumpets.ogg"},{"id":"oboe","g":["instruments"],"cat":"Woodwinds","q":"Which woodwind instrument is playing?","c":["Oboe","Clarinet","Flute","Saxophone"],"x":"The oboe is a double-reed woodwind with a bright, slightly nasal tone. Orchestras tune to the oboe’s A.","url":"/_blob/2984eb80e617380b1a57d2bd05c5c23d","title":"Ferling Oboe Study No 28 Aaron Hill","by":"Aaron Hill","lic":"Public domain","src":"https://commons.wikimedia.org/wiki/File:Ferling_Oboe_Study_No_28_Aaron_Hill.ogg"},{"id":"bagpipes","g":["instruments"],"cat":"Folk","q":"Which instrument is a pipe band playing here?","c":["Bagpipes","Accordion","Harmonica","Pipe organ"],"x":"This is the “Skye Boat Song” played on bagpipes. Bagpipe drones sound one steady note beneath the melody.","url":"/_blob/a94c14ea0122dc2666c0d18155a7f4c9","title":"Skye Boat Song","by":"Clan Stewart Pipe Band","lic":"CC BY-SA 2.0","src":"https://commons.wikimedia.org/wiki/File:Skye_Boat_Song.ogg"},{"id":"sitar","g":["instruments"],"cat":"World music","q":"Which instrument is playing?","c":["Sitar","Banjo","Mandolin","Ukulele"],"x":"The sitar is a long-necked Indian lute. Its shimmering, buzzing tone comes from sympathetic strings and a broad, curved bridge.","url":"/_blob/a9d48ec98b267287699c4fd981c1a749","title":"Sitar clipping","by":"Sanath311","lic":"CC BY-SA 3.0","src":"https://commons.wikimedia.org/wiki/File:Sitar_clipping.ogg"},{"id":"didgeridoo","g":["instruments"],"cat":"World music","q":"Which instrument makes this droning sound?","c":["Didgeridoo","Alphorn","Tuba","Bagpipes"],"x":"The didgeridoo, from northern Australia, is traditionally a eucalyptus trunk hollowed out by termites. Players use circular breathing to drone without pause.","url":"/_blob/5c0b23417056bb028c71a6159a8b1ee0","title":"Didgeridoo sound","by":"Cassa342","lic":"CC BY-SA 4.0","src":"https://commons.wikimedia.org/wiki/File:Didgeridoo_sound.ogg"},{"id":"harpsichord","g":["instruments"],"cat":"Keyboards","q":"Which keyboard instrument is playing this Handel piece?","c":["Harpsichord","Piano","Pipe organ","Celesta"],"x":"This is Handel’s “Harmonious Blacksmith”. A harpsichord plucks its strings with small plectra; a piano strikes them with hammers.","url":"/_blob/2607470a380302210a81c58a1682347d","title":"Handel - Suites for Harpsichord - No.5 in E major - The Harmo…","by":"Musopen","lic":"CC0","src":"https://commons.wikimedia.org/wiki/File:Handel_-_Suites_for_Harpsichord_-_No.5_in_E_major_-_The_Harmonious_Blacksmith.ogg"},{"id":"theremin","g":["instruments"],"cat":"Electronic","q":"Which instrument is making this eerie, gliding sound?","c":["Theremin","Musical saw","Glass harmonica","Bagpipes"],"x":"The theremin is played without being touched: the player’s hands move near two antennas that control pitch and volume.","url":"/_blob/1fe8b2357f9ea3430d5a54ed7595c17d","title":"Epro theremin middle bach","by":"Effebit","lic":"Public domain","src":"https://commons.wikimedia.org/wiki/File:Epro_theremin_middle_bach.ogg"},{"id":"organ","g":["instruments"],"cat":"Keyboards","q":"Which instrument is playing this famous piece?","c":["Pipe organ","Harpsichord","Accordion","Piano"],"x":"This is the Toccata and Fugue in D minor, BWV 565, traditionally attributed to J. S. Bach and one of the best-known works for pipe organ.","url":"/_blob/b3b8070a84de60512b86f474a1d337fa","title":"Bach, Toccata und Fuge d-moll BWV 565, Norbert Schenk","by":"Norbert Schenk","lic":"CC BY 4.0","src":"https://commons.wikimedia.org/wiki/File:Bach,_Toccata_und_Fuge_d-moll_BWV_565,_Norbert_Schenk.mp3"},{"id":"harp","g":["instruments"],"cat":"Strings","q":"Which instrument plays this sweeping glissando?","c":["Harp","Piano","Guitar","Harpsichord"],"x":"A harp glissando is a quick sweep of the fingers across the strings, one of the instrument’s signature sounds.","url":"/_blob/54cecd41ca88cc581f134ea0893724de","title":"Gliss","by":"Daniel Musiklexikon","lic":"Public domain","src":"https://commons.wikimedia.org/wiki/File:Gliss.ogg"},{"id":"spitfire","g":["aircraft","ww2"],"cat":"Aircraft","q":"This British fighter, famous from the 1940 Battle of Britain, is flying past. What is it?","c":["Supermarine Spitfire","P-51 Mustang","Messerschmitt Bf 109","Mitsubishi A6M Zero"],"x":"A Spitfire flying past at RAF Halton. Its Rolls-Royce Merlin V-12 gives it a distinctive smooth growl.","url":"/_blob/079f39920268774d37fc1639e0b6ec25","title":"Spitfire fly past at RAF Halton","by":"LouiseBrown1981","lic":"CC BY-SA 3.0","src":"https://commons.wikimedia.org/wiki/File:Spitfire_fly_past_at_RAF_Halton.ogg"},{"id":"merlin","g":["aircraft","ww2"],"cat":"Engines","q":"This engine powered the Spitfire, the Hurricane and later P-51 Mustangs. What is it?","c":["Rolls-Royce Merlin","Pratt & Whitney R-2800 Double Wasp","Wright R-3350 Duplex-Cyclone","Allison V-1710"],"x":"The Rolls-Royce Merlin is a liquid-cooled V-12. This one is in a Spitfire at the Temora Aviation Museum in Australia.","url":"/_blob/d6b906fef58b630de4ca28720e2c66f2","title":"RR Merlin 66-266","by":"Peter Ellis","lic":"CC BY-SA 3.0","src":"https://commons.wikimedia.org/wiki/File:RR_Merlin_66-266.ogg"},{"id":"airliner","g":["aircraft"],"cat":"Aircraft","q":"What is passing overhead in this recording?","c":["A jet airliner","A propeller plane","A helicopter","A thunderstorm"],"x":"A jet airliner’s roar builds as it approaches, then fades at a lower pitch as it moves away — the Doppler effect.","url":"/_blob/716a1b78833ee58913b0b42fde21ccc8","title":"Jet airliner overhead","by":"Jud McCranie","lic":"CC BY-SA 4.0","src":"https://commons.wikimedia.org/wiki/File:Jet_airliner_overhead.ogg"},{"id":"helicopter","g":["aircraft"],"cat":"Aircraft","q":"What is flying overhead and rattling the windows?","c":["A helicopter","A jet airliner","A hot-air balloon","A glider"],"x":"The rhythmic “whop-whop” comes from the main rotor blades; the low-frequency pulses rattle the windows.","url":"/_blob/4e850f1c7b5771b20b5166a33ba108cb","title":"Helicopter flying overhead","by":"Doggo19292","lic":"Attribution","src":"https://commons.wikimedia.org/wiki/File:Helicopter_flying_overhead.wav"},{"id":"ingenuity","g":["space","aircraft"],"cat":"Mars","q":"NASA’s Perseverance rover recorded this faint hum on Mars. What is making it?","c":["The Ingenuity helicopter","A dust devil","The rover’s own wheels","A Martian marsquake"],"x":"In 2021 Perseverance’s microphone captured the Ingenuity helicopter in flight — the first time a spacecraft recorded the sound of another spacecraft on another planet.","url":"/_blob/eb717921eb869643119ff401b864f4e7","title":"Sounds-of-Mars -Helicopter Flying on Mars","by":"NASA/JPL-Caltech/LANL/CNES/CNRS/ISAE-Supaéro","lic":"Public domain","src":"https://commons.wikimedia.org/wiki/File:Sounds-of-Mars_-Helicopter_Flying_on_Mars.ogg"},{"id":"up844","g":["trains"],"cat":"Railroads","q":"What is making this sound?","c":["A steam locomotive’s whistle","A diesel train’s air horn","A ship’s foghorn","A tornado siren"],"x":"Union Pacific No. 844, a steam locomotive built in 1944 and still run on excursions, sounding its whistle in Kosse, Texas.","url":"/_blob/0c251ecd10643ff79ee48c7683796252","title":"2010 UP844 Whistle","by":"Rvassar","lic":"CC BY-SA 3.0","src":"https://commons.wikimedia.org/wiki/File:2010_UP844_Whistle.ogg"},{"id":"armstrong","g":["space","history"],"cat":"Apollo","q":"Which astronaut is speaking in this recording?","c":["Neil Armstrong","Buzz Aldrin","John Glenn","Alan Shepard"],"x":"Neil Armstrong, stepping onto the Moon on July 20, 1969: “That’s one small step for man, one giant leap for mankind.”","url":"/_blob/6dae0030d1bd76464205b05e87add40a","title":"Armstrong Small Step","by":"NASA","lic":"Public domain","src":"https://commons.wikimedia.org/wiki/File:Armstrong_Small_Step.ogg"},{"id":"eaglelanded","g":["space","history"],"cat":"Apollo","q":"This radio call came from which mission?","c":["Apollo 11","Apollo 8","Apollo 12","Apollo 13"],"x":"“Houston, Tranquility Base here. The Eagle has landed.” Neil Armstrong confirmed the first crewed Moon landing on July 20, 1969.","url":"/_blob/1ba6cd0098d6ebfc14421ac31593f1a2","title":"Apollo 11 Eagle Has Landed","by":"NASA","lic":"Public domain","src":"https://commons.wikimedia.org/wiki/File:Apollo_11_Eagle_Has_Landed.mp3"},{"id":"apollo13","g":["space","history"],"cat":"Apollo","q":"This call to Mission Control came from which mission?","c":["Apollo 13","Apollo 11","Apollo 1","Gemini 8"],"x":"After an oxygen tank ruptured in April 1970, the crew reported “Houston, we’ve had a problem.” All three astronauts returned safely.","url":"/_blob/af9c79710d3434918034b08b72caae6c","title":"Apollo13-wehaveaproblem edit 1","by":"NASA","lic":"Public domain","src":"https://commons.wikimedia.org/wiki/File:Apollo13-wehaveaproblem_edit_1.ogg"},{"id":"sputnik","g":["space","history"],"cat":"Space race","q":"This beeping radio signal came from which spacecraft?","c":["Sputnik 1","Explorer 1","Telstar 1","Vanguard 1"],"x":"Sputnik 1, launched by the Soviet Union on October 4, 1957, was the first artificial satellite. Radio listeners worldwide could pick up its beeps.","url":"/_blob/f7eaca3ac5d555716f14a893913ffb27","title":"Sputnik beep","by":"NASA","lic":"Public domain","src":"https://commons.wikimedia.org/wiki/File:Sputnik_beep.ogg"},{"id":"fdr","g":["history","ww2","speeches"],"cat":"Speeches","q":"Which president is speaking in this recording?","c":["Franklin D. Roosevelt","Harry S. Truman","Herbert Hoover","Dwight D. Eisenhower"],"x":"Franklin D. Roosevelt asked Congress to declare war the day after Pearl Harbor: “Yesterday, December 7th, 1941 — a date which will live in infamy…”","url":"/_blob/c1212272ceec50aa5b8772d72b5f94dc","title":"Roosevelt Infamy","by":"Franklin D. Roosevelt / National Archives","lic":"Public domain","src":"https://commons.wikimedia.org/wiki/File:Roosevelt_Infamy.ogg"}];
+const CLIP_BY_ID=Object.fromEntries(CLIPS.map(k=>[k.id,k]));
+function clipGroupsFor(subject){
+  const s=" "+String(subject).toLowerCase().replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim()+" ";
+  if(AUDIO_SKIP.test(s))return [];
+  return Object.keys(AUDIO_GROUPS).filter(g=>AUDIO_GROUPS[g].test(s.trim())||AUDIO_GROUPS[g].test(s));
+}
+function clipsFor(subject){const g=clipGroupsFor(subject);return g.length?CLIPS.filter(k=>k.g.some(x=>g.includes(x))):[]}
+const audioCount=count=>Math.round(count/3);
+/* positions for n clips spread through a round, never first (so text and audio arrive together) */
+function audioSlots(count,n){const out=[];for(let k=0;k<n;k++)out.push(Math.max(1,Math.min(count-1,Math.round((k+.5)*count/n))));return [...new Set(out)]}
+function clipQuestion(k){return {q:k.q,c:k.c.slice(),a:0,x:k.x,sym:"♪",cat:k.cat,au:k.id}}
+/* pick n clips for this subject: ones the player hasn't had first, mixed across categories */
+function pickClips(subject,n){
+  const pool=clipsFor(subject); if(!pool.length||n<1)return [];
+  const seen=new Set(seenFor(subject)), fresh=[], old=[];
+  pool.slice().sort(()=>Math.random()-.5).forEach(k=>(seen.has(seenLine(clipQuestion(k)))?old:fresh).push(k));
+  const byCat={}; fresh.forEach(k=>(byCat[k.cat]||(byCat[k.cat]=[])).push(k));
+  const mixed=[]; const cats=Object.values(byCat);
+  while(cats.some(c=>c.length))cats.forEach(c=>{if(c.length)mixed.push(c.shift())});
+  return mixed.concat(old).slice(0,n).map(k=>shuffleQ(clipQuestion(k)));
+}
+function audioPlan(subject,count){
+  if(!form.audio)return {slots:[],clips:[]};
+  const clips=pickClips(subject,audioCount(count));
+  return {slots:audioSlots(count,clips.length),clips};
+}
+/* splice planned clips into a finished list of text questions (challenge mode, and any leftovers) */
+function mergeClips(qs,plan){
+  const out=qs.slice(), clips=plan.clips.slice();
+  plan.slots.forEach(i=>{if(clips.length)out.splice(Math.min(i,out.length),0,clips.shift())});
+  return out.concat(clips);
+}
+
+/* one shared player, outside the DOM, so re-rendering after an answer doesn't cut the clip off */
+const player=new Audio(); player.preload="auto";
+let loadedClip=null, playingClip=null, audioErr=null; const played={};
+function clipCredit(k){return `Audio: <a href="${esc(k.src)}" target="_blank" rel="noopener">${esc(k.title)}</a> · ${esc(k.by)} · ${esc(k.lic)} · Wikimedia Commons`}
+function playLabel(id){return audioErr===id?"⚠ Retry":playingClip===id&&!player.paused?"■ Stop":played[id]?"▶ Play again":"▶ Play"}
+function audioHTML(q){
+  const k=q&&q.au&&CLIP_BY_ID[q.au]; if(!k)return "";
+  return `<div class="aud"><button type="button" class="btn${playingClip===k.id&&!player.paused?" on":""}" id="playBtn" data-au="${esc(k.id)}" aria-label="Play the recording">${playLabel(k.id)}</button><div class="credit">${clipCredit(k)}</div></div>`;
+}
+function syncPlay(){
+  const b=$("playBtn"); if(!b)return;
+  const id=b.dataset.au; b.textContent=playLabel(id); b.classList.toggle("on",playingClip===id&&!player.paused);
+}
+function toggleClip(id){
+  const k=CLIP_BY_ID[id]; if(!k)return;
+  if(playingClip===id&&!player.paused){player.pause();player.currentTime=0;playingClip=null;syncPlay();return}
+  audioErr=null;
+  if(loadedClip!==id){player.src=k.url;loadedClip=id}else{try{player.currentTime=0}catch(e){}}
+  playingClip=id; played[id]=true;
+  const pr=player.play();
+  if(pr&&pr.catch)pr.catch(e=>{log("audio play failed "+id+" "+(e&&e.name));if(playingClip===id){playingClip=null;audioErr=id;loadedClip=null}syncPlay()});
+  syncPlay();
+}
+["playing","pause","ended"].forEach(ev=>player.addEventListener(ev,()=>{if(ev==="ended")playingClip=null;syncPlay()}));
+player.addEventListener("error",()=>{log("audio error "+loadedClip);audioErr=loadedClip;playingClip=null;loadedClip=null;syncPlay()});
+/* keep playing only while the question that owns the clip is on screen */
+function settleAudio(activeId){
+  if(playingClip&&playingClip!==activeId){player.pause();playingClip=null}
+  const b=$("playBtn"); if(b)b.onclick=()=>toggleClip(b.dataset.au);
+}
+function audioHint(){
+  const el=$("audioHint"); if(!el)return;
+  const sub=(($("subject")||{}).value||form.subject).trim(), n=clipsFor(sub).length, c=form.count;
+  el.textContent=!form.audio?"Off: every question is text."
+    :!sub?"On: about a third of the questions play a short recording when the subject has clips (birds, animals, musical instruments, aircraft, trains, spaceflight, WWII and 20th-century US history)."
+    :n?`On: ${Math.min(audioCount(c),n)} of ${c} questions will play a recording.`
+    :"On, but there are no recordings for this subject, so this round will be all text.";
+}
+
+/* ---------- rendering ---------- */
+function renderStats(){
+  const t=state.totals;
+  $("sPts").textContent=t.points;
+  $("sCor").textContent=t.correct+"/"+t.answered;
+  $("sAcc").textContent=t.answered?Math.round(t.correct/t.answered*100)+"%":"—";
+  $("sRounds").textContent=t.rounds;
+  $("sStreak").textContent=t.bestStreak;
+  const h=$("hist");
+  $("histPanel").hidden=!state.history.length;
+  h.innerHTML=state.history.map(x=>`<div class="h"><span class="s">${esc(x.subject)}</span><span class="lv">${(LEVELS[x.level]||{name:x.level}).name}</span><span class="sc">${x.correct}/${x.total} · ${x.points} pts</span></div>`).join("");
+}
+function render(error){
+  try{ renderInner(error); const pb=$("playBtn"); settleAudio(pb?pb.dataset.au:null) }catch(e){ log("RENDER ERROR "+e.message); showErr(e.message); throw e }
+}
+function renderInner(error){
+  log("render "+view+(state.round?" q"+state.round.cur+"/"+state.round.questions.length+(state.round.done?" done":""):"")+(error?" err="+error.slice(0,40):""));
+  renderStats();
+  const st=$("stage");
+  if(view==="loading"){
+    st.innerHTML=`<section class="panel"><div class="loading" role="status"><div class="flame" aria-hidden="true"></div>
+      <div><b>Writing ${form.count} ${LEVELS[form.level].name.toLowerCase()} questions${loadingMode==="challenge"?" for your challenge":""}</b><div class="label" style="margin-top:4px">${esc(form.subject)}</div></div>
+      <div id="progressText" style="color:var(--muted);font-size:14px;max-width:46ch">${esc(step||"Starting…")}</div>
+      <div id="elapsed" class="label">0 s</div>
+      <button class="btn" id="stopBtn" type="button">Stop</button></div></section>`;
+    $("stopBtn").onclick=()=>{if(abortCtl){abortCtl.stoppedByUser=true;abortCtl.abort()}};
+    return;
+  }
+  if(view==="match"&&matches[curMatch]){renderMatch(st);return}
+  if(view==="summary"&&pending){
+    const p=pending;
+    st.innerHTML=`<section class="panel summary">
+      <div class="label">${esc(p.subject)} · ${LEVELS[p.level].name}</div>
+      <div class="big" style="margin:10px 0 6px">${p.correct}/${p.total}</div>
+      <p style="margin:0">+${p.points} points this round · ${state.totals.points} total</p>
+      <div style="margin-top:18px"><button class="btn primary" id="again" type="button">New round</button></div></section>`;
+    $("again").onclick=newRound;
+    return;
+  }
+  if(view==="play"&&state.round){
+    const r=state.round,q=r.questions[r.cur],ans=r.answers[r.cur],L="ABCD";
+    st.innerHTML=`<section class="panel">
+      <div class="progress" aria-hidden="true">${barHTML(r)}</div>
+      <article class="q">
+        <div class="tile" aria-hidden="true"><span class="n"><span>${r.cur+1}</span><span>${LEVELS[r.level].pts}</span></span><span class="sym">${esc(q.sym)}</span><span class="nm">${esc(q.cat)}</span></div>
+        <div class="qbody">
+          <div class="label meta">${esc(r.subject)} · ${LEVELS[r.level].name} · <span id="metaCount">${r.cur+1} of ${r.done?r.questions.length:r.total}</span></div>
+          <p class="qtext">${esc(q.q)}</p>${audioHTML(q)}
+          <div class="choices">${q.c.map((c,i)=>{let cls="choice";if(ans){cls+=i===q.a?" right":i===ans.choice?" wrong":" dim"}
+            return `<button type="button" class="${cls}" data-i="${i}" ${ans?"disabled":""}><span class="k">${L[i]}</span><span>${esc(c)}</span></button>`}).join("")}</div>
+          ${ans?`<div class="reveal"><div class="verdict ${ans.correct?"good":"bad"}">${ans.correct?"Correct · +"+LEVELS[r.level].pts+" pts":"Not quite · answer is "+L[q.a]}</div>${q.x?`<p>${esc(q.x)}</p>`:""}</div>
+          <div style="margin-top:16px">${r.cur<r.questions.length-1?`<button type="button" class="btn primary" id="nextBtn">Next question →</button>`
+            :r.done?`<button type="button" class="btn primary" id="nextBtn">Finish round</button>`
+            :`<button type="button" class="btn primary" id="nextBtn" disabled>Next question is being written…</button>`}</div>`:""}
+        </div>
+      </article></section>`;
+    st.querySelectorAll(".choice:not(:disabled)").forEach(b=>b.onclick=()=>answer(+b.dataset.i));
+    const nb=$("nextBtn");if(nb)nb.onclick=next;
+    return;
+  }
+  // setup
+  st.innerHTML=`<section class="panel"><h2>Start a round</h2>
+    <form id="setup" novalidate>
+      <div class="field"><label class="label" for="subject">Subject</label>
+        <input type="text" id="subject" maxlength="80" autocomplete="off" autocapitalize="words" enterkeyhint="go" placeholder="e.g. Volcanoes, Jet engines, Genetics" value="${esc(form.subject)}">
+        <div class="ideas">${IDEAS.map(i=>`<button type="button" data-idea="${esc(i)}">${esc(i)}</button>`).join("")}</div>
+      </div>
+      <div class="field"><span class="label">Difficulty · points per correct answer</span>
+        <div class="levels">${Object.entries(LEVELS).map(([k,v])=>`<input type="radio" name="level" id="lv-${k}" value="${k}" ${form.level===k?"checked":""}><label for="lv-${k}"><b>${v.name}</b><small>${v.pts} pt${v.pts>1?"s":""}</small></label>`).join("")}</div>
+      </div>
+      <div class="field"><span class="label">Questions</span>
+        <div class="seg">${[5,10,15].map(n=>`<input type="radio" name="count" id="ct-${n}" value="${n}" ${form.count===n?"checked":""}><label for="ct-${n}">${n}</label>`).join("")}</div>
+      </div>
+      <div class="field"><span class="label">Audio questions</span>
+        <div class="seg"><input type="radio" name="audio" id="au-0" value="0" ${form.audio?"":"checked"}><label for="au-0">Off</label><input type="radio" name="audio" id="au-1" value="1" ${form.audio?"checked":""}><label for="au-1">On</label></div>
+        <p class="hint" id="audioHint" aria-live="polite"></p>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn primary" type="submit" id="go">Start round</button>
+        <button class="btn" type="button" id="challengeBtn">Challenge someone</button>
+      </div>
+      ${error?`<p class="err" role="alert">${esc(error)}</p><button class="btn" type="button" id="builtIn" style="margin-top:10px">Play built-in science round</button>`:""}
+    </form>${matchListHTML()}</section>`;
+  const f=$("setup");
+  ["input","keyup","change","blur"].forEach(ev=>$("subject").addEventListener(ev,e=>{form.subject=e.target.value;audioHint()}));
+  f.querySelectorAll("[data-idea]").forEach(b=>b.onclick=()=>{form.subject=b.dataset.idea;$("subject").value=form.subject;audioHint()});
+  f.querySelectorAll("input[name=level]").forEach(r=>r.onchange=()=>form.level=r.value);
+  f.querySelectorAll("input[name=count]").forEach(r=>r.onchange=()=>{form.count=+r.value;audioHint()});
+  f.querySelectorAll("input[name=audio]").forEach(r=>r.onchange=()=>{setAudioPref(r.value==="1");audioHint()});
+  audioHint();
+  f.onsubmit=e=>{e.preventDefault();startRound()};
+  const bi=$("builtIn"); if(bi)bi.onclick=startBuiltIn;
+  $("challengeBtn").onclick=()=>startRound("challenge");
+  document.querySelectorAll("[data-match]").forEach(b=>b.onclick=()=>openMatch(b.dataset.match));
+}
+
+/* ---------- challenges: two players, turns passed by text message ----------
+   Artifact links only carry a plain "#name" (letters, digits, hyphens), so the match is packed
+   into that alphabet: base64url with "-" written as "-1" and "_" as "-0". Links point at the
+   published artifact, since this page itself runs on a sandbox address.
+   No server: the link carries the whole match (questions + both players' answers),
+   compressed after "#c=". Each device keeps its own copy and merges every link it opens.
+   Turn order ping-pongs: player 0 answers question 1 first, player 1 answers question 2 first,
+   and so on, so every text answers the other player's open question and opens a new one.
+   A question's result is shown only once both players have answered it. */
+const MKEY="flame-test-trivia-matches";
+const ART_URL="https://claude.ai/artifact/9eGyA4eYmsvLgTnr6m3rTP";
+const toName=t=>t.replace(/-/g,"-1").replace(/_/g,"-0");
+const fromName=t=>t.replace(/-([01])/g,(_,d)=>d==="1"?"-":"_");
+async function matchLink(m){return ART_URL+"#c"+toName(await packMatch(m))}
+let matches=(()=>{try{return JSON.parse(localStorage.getItem(MKEY)||"{}")||{}}catch(e){return {}}})();
+let curMatch=null, matchShow=null, matchMsg="";
+function saveMatches(){try{localStorage.setItem(MKEY,JSON.stringify(matches))}catch(e){}}
+const firstOf=i=>i%2;
+const nextIdx=(m,p)=>m.A[p].findIndex(x=>x==null);
+const canAnswer=(m,p,i)=>i>=0&&(firstOf(i)===p||m.A[1-p][i]!=null);
+const revealed=(m,i)=>m.A[0][i]!=null&&m.A[1][i]!=null;
+const complete=m=>m.qs.every((_,i)=>revealed(m,i));
+function mScores(m){const s=[0,0];m.qs.forEach((q,i)=>{if(revealed(m,i)){if(m.A[0][i]===q.a)s[0]++;if(m.A[1][i]===q.a)s[1]++}});return s}
+function mStatus(m){
+  if(complete(m)){const s=mScores(m);return {key:"done",text:`Final · you ${s[m.me]} · them ${s[1-m.me]}`}}
+  return canAnswer(m,m.me,nextIdx(m,m.me))?{key:"turn",text:"Your turn"}:{key:"wait",text:"Their turn"};
+}
+/* answers count toward your scores only once revealed, so totals can't give away a result early */
+function recordRevealed(m){
+  m.rec=m.rec||[];let any=false;
+  m.qs.forEach((q,i)=>{
+    if(!revealed(m,i)||m.rec[i])return;
+    const ok=m.A[m.me][i]===q.a,at=new Date().toISOString();
+    saveRecord({id:"a"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),round:"m"+m.id,subject:m.subject,key:subjectKey(m.subject),
+      level:m.level,line:seenLine(q),correct:ok,pts:ok?LEVELS[m.level].pts:0,at,qid:null});
+    m.rec[i]=true;any=true;
+  });
+  if(any)rebuild();
+}
+function createMatch(subject,level,qs){
+  const id=Math.random().toString(36).slice(2,10);
+  matches[id]={id,subject,level,me:0,at:new Date().toISOString(),
+    qs:qs.map(q=>({q:q.q,c:q.c,a:q.a,x:q.x||"",sym:q.sym||"",cat:q.cat||"",...(q.au?{au:q.au}:{})})),
+    A:[qs.map(()=>null),qs.map(()=>null)],rec:[]};
+  saveMatches();openMatch(id);
+}
+function openMatch(id){curMatch=id;matchShow=null;matchMsg="";view="match";render();window.scrollTo(0,0)}
+
+/* ----- link packing ----- */
+function b64u(bytes){let s="";for(let i=0;i<bytes.length;i+=0x8000)s+=String.fromCharCode.apply(null,bytes.subarray(i,i+0x8000));return btoa(s).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
+function unb64u(t){const s=atob(t.replace(/-/g,"+").replace(/_/g,"/"));const b=new Uint8Array(s.length);for(let i=0;i<s.length;i++)b[i]=s.charCodeAt(i);return b}
+async function packMatch(m){
+  const d={v:1,id:m.id,s:m.subject,l:m.level,f:m.me,
+    q:m.qs.map(q=>[q.q,...q.c,q.a,q.x,q.sym,q.cat,...(q.au?[q.au]:[])]),
+    A:m.A.map(a=>a.map(x=>x==null?"-":String(x)).join(""))};
+  const raw=new TextEncoder().encode(JSON.stringify(d));
+  if(window.CompressionStream){
+    try{const z=new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream("deflate-raw"))).arrayBuffer());return "z"+b64u(z)}catch(e){}
+  }
+  return "j"+b64u(raw);
+}
+async function unpackMatch(t){
+  let bytes=unb64u(t.slice(1));
+  if(t[0]==="z")bytes=new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer());
+  const d=JSON.parse(new TextDecoder().decode(bytes));
+  if(!d||d.v!==1||!d.id||!Array.isArray(d.q)||!LEVELS[d.l])throw new Error("bad link");
+  const qs=d.q.map(r=>({q:String(r[0]),c:r.slice(1,5).map(String),a:Number(r[5]),x:String(r[6]||""),sym:String(r[7]||""),cat:String(r[8]||""),...(r[9]&&CLIP_BY_ID[r[9]]?{au:String(r[9])}:{})}));
+  if(!qs.every(valid))throw new Error("bad question");
+  const A=[0,1].map(p=>qs.map((_,i)=>{const ch=(d.A[p]||"")[i];return ch>="0"&&ch<="3"?+ch:null}));
+  return {id:String(d.id).slice(0,16),subject:String(d.s).slice(0,80),level:d.l,from:d.f===1?1:0,qs,A};
+}
+async function openLink(hash){
+  try{
+    const d=await unpackMatch(fromName(decodeURIComponent(hash.slice(2))));
+    let m=matches[d.id];
+    if(!m){m=matches[d.id]={id:d.id,subject:d.subject,level:d.level,me:1-d.from,at:new Date().toISOString(),qs:d.qs,A:d.A,rec:[]}}
+    else{for(const p of [0,1])d.A[p].forEach((x,i)=>{if(m.A[p][i]==null&&x!=null)m.A[p][i]=x})} // answers are never changed once given
+    m.at=new Date().toISOString();
+    recordRevealed(m);saveMatches();
+    openMatch(d.id);
+  }catch(e){
+    log("bad challenge link "+(e&&e.message));
+    view="setup";render("That challenge link didn't open. It may have been cut off when it was sent; ask for it to be sent again.");
+  }
+}
+function matchText(m){
+  const s=mScores(m), lv=LEVELS[m.level].name, n=m.qs.length;
+  const fresh=m.A[1].every(x=>x==null)&&m.me===0;
+  return complete(m)?`Final results are in for our ${m.subject} trivia match. Tap to see:`
+    :fresh?`Flame Test Trivia challenge: ${m.subject} (${lv}, ${n} questions). Your turn:`
+    :`Your turn in our ${m.subject} trivia match. Score so far: me ${s[m.me]}, you ${s[1-m.me]}.`;
+}
+let lastCopy="";
+async function sendMatch(m){
+  const msg=matchText(m)+" "+await matchLink(m);
+  m.sentAt=new Date().toISOString();if(complete(m))m.sentFinal=true;saveMatches();
+  lastCopy=msg;
+  try{await navigator.clipboard.writeText(msg);matchMsg="Copied. Open Messages, paste it to your opponent, and send."}
+  catch(e){matchMsg="copy-failed"}
+  render();
+  const box=$("copyBox");if(box){box.focus();box.select()}
+}
+function answerMatch(choice){
+  const m=matches[curMatch],p=m.me,i=nextIdx(m,p);
+  if(!canAnswer(m,p,i))return;
+  m.A[p][i]=choice;m.at=new Date().toISOString();
+  recordRevealed(m);saveMatches();matchShow=i;matchMsg="";render();
+}
+function matchBar(m){
+  return m.qs.map((q,i)=>{const mine=m.A[m.me][i];
+    return `<span class="${revealed(m,i)?(mine===q.a?"good":"bad"):mine!=null?"cur":""}"></span>`}).join("");
+}
+function renderMatch(st){
+  const m=matches[curMatch],p=m.me,o=1-p,L="ABCD",lv=LEVELS[m.level],n=m.qs.length,s=mScores(m);
+  const head=`<div class="label meta">${esc(m.subject)} · ${lv.name} · Challenge · you ${s[p]} · them ${s[o]}</div>`;
+  const ni=nextIdx(m,p);
+  const i=matchShow!=null?matchShow:(canAnswer(m,p,ni)?ni:-1);
+  if(i>=0){
+    const q=m.qs[i],mine=m.A[p][i],theirs=m.A[o][i],both=revealed(m,i),after=nextIdx(m,p);
+    let reveal="";
+    if(mine!=null){
+      reveal=both?`<div class="reveal"><div class="verdict ${mine===q.a?"good":"bad"}">${mine===q.a?"Correct · +"+lv.pts+" pts":"Not quite · answer is "+L[q.a]}</div>
+          <p class="duel">You: <b>${L[mine]}</b> ${mine===q.a?"✓":"✗"} · Them: <b>${L[theirs]}</b> ${theirs===q.a?"✓":"✗"}</p>${q.x?`<p>${esc(q.x)}</p>`:""}</div>`
+        :`<div class="reveal"><div class="verdict">Answer locked in</div><p>You'll both see the result after your opponent answers.</p></div>`;
+      reveal+=`<div style="margin-top:16px"><button type="button" class="btn primary" id="mNext">${canAnswer(m,p,after)?"Next question →":"Continue"}</button></div>`;
+    }
+    st.innerHTML=`<section class="panel">
+      <div class="progress" aria-hidden="true">${matchBar(m)}</div>
+      <article class="q">
+        <div class="tile" aria-hidden="true"><span class="n"><span>${i+1}</span><span>${lv.pts}</span></span><span class="sym">${esc(q.sym||m.subject.slice(0,2))}</span><span class="nm">${esc(q.cat||m.subject)}</span></div>
+        <div class="qbody">${head.replace("Challenge ·","Challenge · "+(i+1)+" of "+n+" ·")}
+          ${theirs!=null&&mine==null?`<div class="label" style="color:var(--accent);margin-bottom:6px">Your opponent has answered this one</div>`:""}
+          <p class="qtext">${esc(q.q)}</p>${audioHTML(q)}
+          <div class="choices">${q.c.map((c,k)=>{let cls="choice";if(mine!=null){cls+=both?(k===q.a?" right":k===mine?" wrong":" dim"):(k===mine?" picked":" dim")}
+            return `<button type="button" class="${cls}" data-k="${k}" ${mine!=null?"disabled":""}><span class="k">${L[k]}</span><span>${esc(c)}</span></button>`}).join("")}</div>
+          ${reveal}
+        </div>
+      </article></section>`;
+    st.querySelectorAll(".choice:not(:disabled)").forEach(b=>b.onclick=()=>answerMatch(+b.dataset.k));
+    const nb=$("mNext");if(nb)nb.onclick=()=>{matchShow=null;render();window.scrollTo(0,0)};
+    return;
+  }
+  // between turns, or finished
+  const done=complete(m), owesFinal=done&&firstOf(n-1)!==p&&!m.sentFinal;
+  const win=s[p]>s[o]?"You win":s[p]<s[o]?"They win":"It's a tie";
+  st.innerHTML=`<section class="panel summary">
+      <div class="progress" aria-hidden="true">${matchBar(m)}</div>
+      ${head}
+      ${done?`<div class="big" style="margin:10px 0 6px">${s[p]}–${s[o]}</div><p style="margin:0"><b>${win}.</b> +${s[p]*lv.pts} points to your total.</p>`
+        :`<h2 style="margin:12px 0 6px">Their turn</h2><p style="margin:0 auto;max-width:46ch">Copy the message, paste it into a text to your opponent, and send it. When they've answered, they'll text a link back; open it to continue.</p>`}
+      ${!done||owesFinal?`<div style="margin-top:18px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <button class="btn primary" id="mSend" type="button">${done?"Copy results for your opponent":m.sentAt?"Copy again":"Copy message for your opponent"}</button></div>`:""}
+      ${matchMsg==="copy-failed"?`<p style="margin:12px 0 6px;font-size:14px">Couldn't copy automatically. Select all of this, copy it, and paste it into a text:</p>
+        <textarea id="copyBox" readonly rows="4" style="width:100%;font:12px var(--mono);padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink)">${esc(lastCopy)}</textarea>`
+        :matchMsg?`<p class="label" style="margin-top:12px">${esc(matchMsg)}</p>`:""}
+      <div style="margin-top:14px"><button class="btn ${done&&!owesFinal?"primary":"quiet"}" id="mBack" type="button">New round</button></div>
+    </section>`;
+  const sb=$("mSend");if(sb)sb.onclick=()=>sendMatch(m);
+  $("mBack").onclick=newRound;
+}
+function matchListHTML(){
+  const list=Object.values(matches).sort((a,b)=>a.at<b.at?1:-1).slice(0,6);
+  if(!list.length)return "";
+  return `<div class="field mlist" style="margin:20px 0 0"><span class="label">Your challenges</span>
+    ${list.map(m=>{const st=mStatus(m);return `<button type="button" class="mrow" data-match="${esc(m.id)}"><span class="s">${esc(m.subject)} · ${LEVELS[m.level].name}</span><span class="st ${st.key}">${esc(st.text)}</span></button>`}).join("")}</div>`;
+}
+
+/* ---------- reset all ---------- */
+function resetButton(){
+  const z=$("resetZone");
+  z.innerHTML=`<button class="btn quiet" id="resetBtn" type="button">Erase all scores</button>`;
+  $("resetBtn").onclick=()=>{
+    z.innerHTML=`<div class="confirm"><span>Erase cumulative score and history?</span><button class="btn danger" id="yes" type="button">Erase</button><button class="btn" id="no" type="button">Cancel</button></div>`;
+    $("yes").onclick=async()=>{
+      resetAt=new Date().toISOString(); state.round=null; rebuild(); view="setup"; resetButton(); render(); saveRound();
+      if(dbReady&&setDoc)setDoc.set({resetAt}).catch(()=>{});
+    };
+    $("no").onclick=resetButton;
+  };
+}
+
+log("load "+navigator.userAgent.slice(0,80));
+loadLocal();
+log("local state round="+(state.round?state.round.questions.length:"none"));
+if(!state.totals){state=blank()}
+/* Always open on a clean setup screen: no subject pre-chosen and no old round resumed.
+   Answers are saved one record at a time, so dropping the unfinished round loses no score. */
+if(state.round){log("discarding saved round on startup");state.round=null;saveLocal()}
+form={subject:"",level:"medium",count:10,audio:audioPref};
+rebuild();
+view="setup";
+const fromLink=/^#c[zj]/.test(location.hash);
+render();resetButton();const dbInit=initDb();
+if(fromLink)openLink(location.hash);
+window.addEventListener("hashchange",()=>{if(/^#c[zj]/.test(location.hash))openLink(location.hash)});
+</script>
+
+</body></html>
